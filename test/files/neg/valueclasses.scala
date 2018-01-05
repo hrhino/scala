@@ -28,9 +28,9 @@ class V10[T](val x: T)  extends AnyVal // ok
 class V11[T](val x: List[T]) extends AnyVal // ok
 class V12[@specialized T, U](val x: (T, U)) extends AnyVal // fail
 
-class V13(x: Int) extends AnyVal // fail
+class V13(x: Int) extends AnyVal // okay, wasn't allowed in 2.12.x
 
-class V14(private[this] val x: Int) extends AnyVal // fail
-class V15(protected[this] val x: Int) extends AnyVal // fail
+class V14(private[this] val x: Int) extends AnyVal // okay, wasn't allowed in 2.12.x
+class V15(protected[this] val x: Int) extends AnyVal //okay, wasn't allowed in 2.12.x
 
 class V16()(val a: Any) extends AnyVal // fail, was allowed 2.10.x

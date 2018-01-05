@@ -181,7 +181,14 @@ trait SyntheticMethods extends ast.TreeDSL {
       val otherSym  = eqmeth.newValue(otherName, eqmeth.pos, SYNTHETIC) setInfo clazz.tpe
       val pairwise  = accessors collect {
         case acc if usefulEquality(acc) =>
-          fn(Select(mkThis, acc), acc.tpe member nme.EQ, Select(Ident(otherSym), acc))
+          /* Q: why is `other.acc` made attributed?
+           * A: because if `acc` is LOCAL it won't pass `checkAccessible` the
+           *    normal way, but we need to be able to get at a value class unbox
+           *    to implement value class equality properly.
+           * This is analogous to dotc, in which these methods are generated in posttyper.
+           */
+          val otherSelect = gen.mkAttributedSelect(gen.mkAttributedIdent(otherSym), acc)
+          fn(mkThisSelect(acc), acc.tpe member nme.EQ, otherSelect)
       }
       val canEq     = gen.mkMethodCall(otherSym, nme.canEqual_, Nil, List(mkThis))
       val tests     = if (clazz.isDerivedValueClass || clazz.isFinal && syntheticCanEqual) pairwise else pairwise :+ canEq

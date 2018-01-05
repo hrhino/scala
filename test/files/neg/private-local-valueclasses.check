@@ -1,0 +1,4 @@
+private-local-valueclasses.scala:8: error: value s is not a member of String
+  "fsda".s // not found
+         ^
+one error found

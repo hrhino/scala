@@ -4,15 +4,9 @@ trait T extends AnyVal // fail
 valueclasses.scala:6: error: value class may not be a member of another class
   class Bar(x: Int) extends AnyVal // fail
         ^
-valueclasses.scala:6: error: value class parameter must be a val and not be private[this]
-  class Bar(x: Int) extends AnyVal // fail
-            ^
 valueclasses.scala:8: error: value class may not be a local class
     class Baz(x: Int) extends AnyVal // fail
           ^
-valueclasses.scala:8: error: value class parameter must be a val and not be private[this]
-    class Baz(x: Int) extends AnyVal // fail
-              ^
 valueclasses.scala:12: error: value class needs to have exactly one val parameter
 class V1 extends AnyVal // fail
       ^
@@ -31,16 +25,7 @@ valueclasses.scala:24: error: field definition is not allowed in value class
 valueclasses.scala:29: error: type parameter of value class may not be specialized
 class V12[@specialized T, U](val x: (T, U)) extends AnyVal // fail
                        ^
-valueclasses.scala:31: error: value class parameter must be a val and not be private[this]
-class V13(x: Int) extends AnyVal // fail
-          ^
-valueclasses.scala:33: error: value class parameter must be a val and not be private[this]
-class V14(private[this] val x: Int) extends AnyVal // fail
-                            ^
-valueclasses.scala:34: error: value class parameter must not be protected[this]
-class V15(protected[this] val x: Int) extends AnyVal // fail
-                              ^
 valueclasses.scala:36: error: value class needs to have exactly one val parameter
 class V16()(val a: Any) extends AnyVal // fail, was allowed 2.10.x
       ^
-15 errors found
+10 errors found

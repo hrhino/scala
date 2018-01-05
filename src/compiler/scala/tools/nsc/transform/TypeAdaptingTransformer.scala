@@ -96,8 +96,10 @@ trait TypeAdaptingTransformer { self: TreeDSL =>
       if (tree.tpe.typeSymbol == NullClass && isPrimitiveValueClass(underlying.typeSymbol)) {
         // convert `null` directly to underlying type, as going via the unboxed type would yield a NPE (see scala/bug#5866)
         unbox(tree, underlying)
-      } else
-        Apply(Select(adaptToType(tree, clazz.tpe), clazz.derivedValueClassUnbox), List())
+      } else {
+        // derivedValueClassUnbox is either a value or a method, so rely on zero-arg adaptation in the method case
+        Select(adaptToType(tree, clazz.tpe), clazz.derivedValueClassUnbox)
+      }
 
     /** Generate a synthetic cast operation from tree.tpe to pt.
       *

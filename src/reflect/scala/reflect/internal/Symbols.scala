@@ -2457,9 +2457,14 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     def setterNameInBase(base: Symbol, expanded: Boolean): TermName =
       if (expanded) nme.expandedSetterName(setterName, base) else setterName
 
-    /** If this is a derived value class, return its unbox method
-     *  or NoSymbol if it does not exist.
-     */
+    /** The symbol that extracts the underlying value of a derived value class.
+      *
+      * This is the accessor method of the paramaccessor of the (single) value
+      * class constructor parameter, but the paramaccessor itself if the param
+      * was LOCAL.
+      *
+      * If this is not a derived value class, `NoSymbol`.
+      */
     def derivedValueClassUnbox: Symbol = NoSymbol
 
      /** The case module corresponding to this case class
@@ -3361,10 +3366,10 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       clone
     }
 
-    override def derivedValueClassUnbox =
-      // (info.decl(nme.unbox)) orElse      uncomment once we accept unbox methods
-      (info.decls.find(_ hasAllFlags PARAMACCESSOR | METHOD) getOrElse
-       NoSymbol)
+    override def derivedValueClassUnbox = {
+      @inline def findBy(flags: Long) = info.decls.find(_ hasAllFlags flags)
+      findBy(PARAMACCESSOR | METHOD) orElse findBy(PARAMACCESSOR | LOCAL) getOrElse NoSymbol
+    }
 
     private[this] var childSet: Set[Symbol] = Set()
     override def children = childSet

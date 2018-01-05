@@ -1137,7 +1137,7 @@ trait Typers extends Adaptations with Tags with TypersTracking with PatternTyper
 
 
       def vanillaAdapt(tree: Tree) = {
-        def applyPossible = {
+        def applyPossible = !phase.erasedTypes && { // TODO what breaks with no vanillaAdapt on erasedTypes at all?
           def applyMeth = member(adaptToName(tree, nme.apply), nme.apply)
           def hasPolymorphicApply = applyMeth.alternatives exists (_.tpe.typeParams.nonEmpty)
           def hasMonomorphicApply = applyMeth.alternatives exists (_.tpe.paramSectionCount > 0)
@@ -1433,16 +1433,19 @@ trait Typers extends Adaptations with Tags with TypersTracking with PatternTyper
             val paramAccessor = clazz.constrParamAccessors.head
             if (paramAccessor.isMutable)
               context.error(paramAccessor.pos, "value class parameter must not be a var")
-            val accessor = decls.toList.find(x => x.isMethod && x.accessedOrSelf == paramAccessor)
-            accessor match {
-              case None =>
-                context.error(paramAccessor.pos, "value class parameter must be a val and not be private[this]")
-              case Some(acc) if acc.isProtectedLocal =>
-                context.error(paramAccessor.pos, "value class parameter must not be protected[this]")
-              case Some(acc) =>
-                if (acc.tpe.typeSymbol.isDerivedValueClass)
-                  context.error(acc.pos, "value class may not wrap another user-defined value class")
-                checkEphemeral(clazz, body filterNot (stat => stat.symbol != null && stat.symbol.accessedOrSelf == paramAccessor))
+            if (paramAccessor.tpe.typeSymbol.isDerivedValueClass)
+              context.error(paramAccessor.pos, "value class may not wrap another user-defined value class")
+
+            checkEphemeral(clazz, body filterNot (stat => stat.symbol != null && stat.symbol.accessedOrSelf == paramAccessor))
+
+            if (!settings.isScala213) {
+              decls.toList.find(x => x.isMethod && x.accessedOrSelf == paramAccessor) match {
+                case None =>
+                  context.error(paramAccessor.pos, "value class parameter must be a val and not be private[this]")
+                case Some(acc) if acc.isProtectedLocal =>
+                  context.error(paramAccessor.pos, "value class parameter must not be protected[this]")
+                case _ =>
+              }
             }
           case _ =>
             context.error(clazz.pos, "value class needs to have exactly one val parameter")
