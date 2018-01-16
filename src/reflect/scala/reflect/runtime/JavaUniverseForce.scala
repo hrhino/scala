@@ -186,7 +186,6 @@ trait JavaUniverseForce { self: runtime.JavaUniverse  =>
     this.typeVarToOriginMap
     this.ErroneousCollector
     this.adaptToNewRunMap
-    this.SubTypePair
     this.SymbolKind
     this.NoSymbol
     this.CyclicReference

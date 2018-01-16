@@ -19,17 +19,7 @@ trait TypeComparers {
   private val _pendingSubTypes = new mutable.HashSet[SubTypePair]
   def pendingSubTypes = _pendingSubTypes
 
-  final case class SubTypePair(tp1: Type, tp2: Type) {
-    // scala/bug#8146 we used to implement equality here in terms of pairwise =:=.
-    //         But, this was inconsistent with hashCode, which was based on the
-    //         Type#hashCode, based on the structure of types, not the meaning.
-    //         Now, we use `Type#{equals,hashCode}` as the (consistent) basis for
-    //         detecting cycles (aka keeping subtyping decidable.)
-    //
-    //         I added a tests to show that we detect the cycle: neg/t8146-no-finitary*
-
-    override def toString = tp1+" <:<? "+tp2
-  }
+  final type SubTypePair = TypeComparers.SubTypePair[self.type]
 
   private var _subsametypeRecursions: Int = 0
   def subsametypeRecursions = _subsametypeRecursions
@@ -631,4 +621,21 @@ trait TypeComparers {
     }
     loop(tp.baseClasses)
   }
+}
+
+object TypeComparers {
+
+  // moved here to avoid carrying around an outer pointer
+  final case class SubTypePair[U <: SymbolTable with Singleton](tp1: U#Type, tp2: U#Type) {
+    // scala/bug#8146 we used to implement equality here in terms of pairwise =:=.
+    //         But, this was inconsistent with hashCode, which was based on the
+    //         Type#hashCode, based on the structure of types, not the meaning.
+    //         Now, we use `Type#{equals,hashCode}` as the (consistent) basis for
+    //         detecting cycles (aka keeping subtyping decidable.)
+    //
+    //         I added a test to show that we detect the cycle: neg/t8146-no-finitary*
+
+    override def toString = s"$tp1<:<?$tp2"
+  }
+
 }
