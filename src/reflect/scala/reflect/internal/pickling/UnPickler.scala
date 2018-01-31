@@ -739,7 +739,6 @@ abstract class UnPickler {
 
       override def complete(sym: Symbol) : Unit = {
         completeInternal(sym)
-        if (!isCompilerUniverse) markAllCompleted(sym)
       }
       override def load(sym: Symbol) { complete(sym) }
     }

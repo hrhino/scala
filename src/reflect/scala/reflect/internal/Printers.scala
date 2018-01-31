@@ -1351,7 +1351,6 @@ trait Printers extends api.Printers { self: SymbolTable =>
   }
 
   def showDecl(sym: Symbol): String = {
-    if (!isCompilerUniverse) definitions.fullyInitializeSymbol(sym)
     sym.defString
   }
 }

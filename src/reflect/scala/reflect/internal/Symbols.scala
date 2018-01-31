@@ -126,7 +126,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     def knownDirectSubclasses = {
       // See `getFlag` to learn more about the `isThreadsafe` call in the body of this method.
-      if (!isCompilerUniverse && !isThreadsafe(purpose = AllOps)) initialize
 
       enclosingPackage.info.decls.foreach { sym =>
         if(sourceFile == sym.sourceFile) {
@@ -142,7 +141,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     def selfType = {
       // See `getFlag` to learn more about the `isThreadsafe` call in the body of this method.
-      if (!isCompilerUniverse && !isThreadsafe(purpose = AllOps)) initialize
       typeOfThis
     }
 
@@ -217,9 +215,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     // makes sure that all symbols that runtime reflection deals with are synchronized
     private def isSynchronized = this.isInstanceOf[scala.reflect.runtime.SynchronizedSymbols#SynchronizedSymbol]
     private def isAprioriThreadsafe = isThreadsafe(AllOps)
-
-    if (!(isCompilerUniverse || isSynchronized || isAprioriThreadsafe))
-      throw new AssertionError(s"unsafe symbol $initName (child of $initOwner) in runtime reflection universe") // Not an assert to avoid retention of `initOwner` as a field!
 
     type AccessBoundaryType = Symbol
     type AnnotationType     = AnnotationInfo
@@ -731,13 +726,11 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
      *  runtime reflection universe, and if yes and if we've not yet loaded the requested info, then to commence initialization.
      */
     final def getFlag(mask: Long): Long = {
-      if (!isCompilerUniverse && !isThreadsafe(purpose = FlagOps(mask))) initialize
       flags & mask
     }
     /** Does symbol have ANY flag in `mask` set? */
     final def hasFlag(mask: Long): Boolean = {
       // See `getFlag` to learn more about the `isThreadsafe` call in the body of this method.
-      if (!isCompilerUniverse && !isThreadsafe(purpose = FlagOps(mask))) initialize
       (flags & mask) != 0
     }
     def hasFlag(mask: Int): Boolean = hasFlag(mask.toLong)
@@ -745,7 +738,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     /** Does symbol have ALL the flags in `mask` set? */
     final def hasAllFlags(mask: Long): Boolean = {
       // See `getFlag` to learn more about the `isThreadsafe` call in the body of this method.
-      if (!isCompilerUniverse && !isThreadsafe(purpose = FlagOps(mask))) initialize
       (flags & mask) == mask
     }
 
@@ -1216,7 +1208,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     // lots of these to be declared (or more realistically, discovered.)
     def owner_=(owner: Symbol) {
       saveOriginalOwner(this)
-      assert(isCompilerUniverse, "owner_= is not thread-safe; cannot be run in reflexive code")
       if (traceSymbolActivity)
         traceSymbols.recordNewSymbolOwner(this, owner)
       _rawowner = owner
@@ -1427,7 +1418,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     private[this] var _privateWithin: Symbol = _
     def privateWithin = {
       // See `getFlag` to learn more about the `isThreadsafe` call in the body of this method.
-      if (!isCompilerUniverse && !isThreadsafe(purpose = AllOps)) initialize
       _privateWithin
     }
     def privateWithin_=(sym: Symbol) { _privateWithin = sym }
@@ -1643,7 +1633,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     // adapt to new run in fsc.
     private def adaptInfos(infos: TypeHistory): TypeHistory = {
-      assert(isCompilerUniverse)
       if (infos == null || runId(infos.validFrom) == currentRunId) {
         infos
       } else if (infos ne infos.oldest) {
@@ -1687,7 +1676,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     /** Was symbol's type updated during given phase? */
     final def hasTypeAt(pid: Phase#Id): Boolean = {
-      assert(isCompilerUniverse)
       var infos = this.infos
       while ((infos ne null) && phaseId(infos.validFrom) > pid) infos = infos.prev
       infos ne null
@@ -1847,7 +1835,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
      */
     def annotations: List[AnnotationInfo] = {
       // See `getFlag` to learn more about the `isThreadsafe` call in the body of this method.
-      if (!isCompilerUniverse && !isThreadsafe(purpose = AllOps)) initialize
       _annotations
     }
 
@@ -2979,7 +2966,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       //
       // Out of caution, I've also disable caching if there are active type completers, which also
       // mutate symbol infos during val and def return type inference based the overridden member.
-      if (!isCompilerUniverse || isPastTyper || lockedCount > 0) return pre.computeMemberType(this)
 
       if (mtpeRunId == currentRunId && (mtpePre eq pre) && (mtpeInfo eq info))
         return mtpeResult

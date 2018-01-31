@@ -9,7 +9,7 @@ trait TraceSymbolActivity {
   import global._
 
   private[this] var enabled = traceSymbolActivity
-  if (enabled && global.isCompilerUniverse)
+  if (enabled)
     scala.sys addShutdownHook showAllSymbols()
 
   val allSymbols  = mutable.Map[Int, Symbol]()

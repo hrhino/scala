@@ -86,11 +86,7 @@ private[reflect] trait SynchronizedSymbols extends internal.Symbols { self: Symb
      *  I'm only considering TopLevelPickledFlags to be sources of potential initialization. This ensures that such system flags as
      *  isMethod, isModule or isPackage are never going to auto-initialize.
      */
-    override def isThreadsafe(purpose: SymbolOps) = {
-      if (isCompilerUniverse) false
-      else if (_initialized) true
-      else purpose.isFlagRelated && (_initializationMask & purpose.mask & TopLevelPickledFlags) == 0
-    }
+    override def isThreadsafe(purpose: SymbolOps) = false
 
     /** Communicates with completers declared in scala.reflect.runtime.SymbolLoaders
      *  about the status of initialization of the underlying symbol.
@@ -133,29 +129,10 @@ private[reflect] trait SynchronizedSymbols extends internal.Symbols { self: Symb
     override def typeSignatureIn(site: Type): Type = gilSynchronizedIfNotThreadsafe { super.typeSignatureIn(site) }
 
     override def typeParams: List[Symbol] = gilSynchronizedIfNotThreadsafe {
-      if (isCompilerUniverse) super.typeParams
-      else {
-        def completeTypeParams = {
-          if (isMonomorphicType) Nil
-          else {
-            // analogously to the "info" getter, here we allow for two completions:
-            //   one: sourceCompleter to LazyType, two: LazyType to completed type
-            rawInfo load this
-            if (validTo == NoPeriod)
-              rawInfo load this
-
-            rawInfo.typeParams
-          }
-        }
-        if (validTo != NoPeriod) rawInfo.typeParams else completeTypeParams
-      }
+      super.typeParams
     }
     override def unsafeTypeParams: List[Symbol] = gilSynchronizedIfNotThreadsafe {
-      if (isCompilerUniverse) super.unsafeTypeParams
-      else {
-        if (isMonomorphicType) Nil
-        else rawInfo.typeParams
-      }
+      super.unsafeTypeParams
     }
 
 // ------ creators -------------------------------------------------------------------

@@ -101,13 +101,7 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
     // this override does its best to guard against it
     override def enter[T <: Symbol](sym: T): T = {
       // workaround for scala/bug#7728
-      if (isCompilerUniverse) super.enter(sym)
-      else {
-        val existing = super.lookupEntry(sym.name)
-        def eitherIsMethod(sym1: Symbol, sym2: Symbol) = sym1.isMethod || sym2.isMethod
-        assert(existing == null || eitherIsMethod(existing.sym, sym), s"pkgClass = $pkgClass, sym = $sym, existing = $existing")
-        super.enter(sym)
-      }
+      super.enter(sym)
     }
 
     override def enterIfNew[T <: Symbol](sym: T): T = {

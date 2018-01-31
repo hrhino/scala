@@ -265,8 +265,7 @@ abstract class SymbolTable extends macros.Universe
   }
 
   def slowButSafeEnteringPhase[T](ph: Phase)(op: => T): T = {
-    if (isCompilerUniverse) enteringPhase(ph)(op)
-    else op
+    enteringPhase(ph)(op)
   }
 
   @inline final def exitingPhase[T](ph: Phase)(op: => T): T = enteringPhase(ph.next)(op)
@@ -276,7 +275,7 @@ abstract class SymbolTable extends macros.Universe
     if (isAtPhaseAfter(target)) enteringPhase(target)(op) else op
 
   def slowButSafeEnteringPhaseNotLaterThan[T](target: Phase)(op: => T): T =
-    if (isCompilerUniverse) enteringPhaseNotLaterThan(target)(op) else op
+     enteringPhaseNotLaterThan(target)(op)
 
   final def isValid(period: Period): Boolean =
     period != 0 && runId(period) == currentRunId && {
@@ -441,11 +440,6 @@ abstract class SymbolTable extends macros.Universe
 
   /** The phase which has given index as identifier. */
   val phaseWithId: Array[Phase]
-
-  /** Is this symbol table a part of a compiler universe?
-   */
-  @inline final val isCompilerUniverse = isCompilerUniverse0
-  protected[this] def isCompilerUniverse0: Boolean = false
 
   @deprecated("use enteringPhase", "2.10.0") // Used in sbt 0.12.4
   @inline final def atPhase[T](ph: Phase)(op: => T): T = enteringPhase(ph)(op)

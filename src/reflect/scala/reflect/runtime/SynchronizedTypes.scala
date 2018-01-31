@@ -27,17 +27,7 @@ private[reflect] trait SynchronizedTypes extends internal.Types { self: SymbolTa
     // despite that toolbox universes are decorated, toolboxes are compilers,
     // i.e. they have their caches cleaned up automatically on per-run basis,
     // therefore they should use vanilla uniques, which are faster
-    if (!isCompilerUniverse) {
-      val inCache = uniques get tp
-      val result = if (inCache.isDefined) inCache.get.get else null
-      if (result ne null) result.asInstanceOf[T]
-      else {
-        uniques(tp) = new jWeakRef(tp)
-        tp
-      }
-    } else {
-      super.unique(tp)
-    }
+    super.unique(tp)
   }
 
   private lazy val _skolemizationLevel = mkThreadLocalStorage(0)

@@ -12,14 +12,6 @@ private[reflect] trait Gil {
   private lazy val gil = new java.util.concurrent.locks.ReentrantLock
 
   @inline final def gilSynchronized[T](body: => T): T = {
-    if (isCompilerUniverse) body
-    else {
-      try {
-        gil.lock()
-        body
-      } finally {
-        gil.unlock()
-      }
-    }
+    body
   }
 }
