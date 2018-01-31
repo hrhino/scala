@@ -444,7 +444,8 @@ abstract class SymbolTable extends macros.Universe
 
   /** Is this symbol table a part of a compiler universe?
    */
-  def isCompilerUniverse = false
+  @inline final val isCompilerUniverse = isCompilerUniverse0
+  protected[this] def isCompilerUniverse0: Boolean = false
 
   @deprecated("use enteringPhase", "2.10.0") // Used in sbt 0.12.4
   @inline final def atPhase[T](ph: Phase)(op: => T): T = enteringPhase(ph)(op)
