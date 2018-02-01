@@ -1745,7 +1745,7 @@ trait Typers extends Adaptations with Tags with TypersTracking with PatternTyper
           val sameSourceFile = context.unit.source.file == psym.sourceFile
 
           if (!isPastTyper && psym.hasDeprecatedInheritanceAnnotation &&
-            !sameSourceFile && !context.owner.ownerChain.exists(x => x.isDeprecated || x.hasBridgeAnnotation)) {
+            !sameSourceFile && !context.owner.ownerChainExists(x => x.isDeprecated || x.hasBridgeAnnotation)) {
             val version = psym.deprecatedInheritanceVersion.getOrElse("")
             val since   = if (version.isEmpty) version else s" (since $version)"
             val message = psym.deprecatedInheritanceMessage.map(msg => s": $msg").getOrElse("")

@@ -1222,7 +1222,23 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       _rawowner = owner
     }
 
-    def ownerChain: List[Symbol] = this :: owner.ownerChain
+    final def ownerChain: List[Symbol] = if (this eq NoSymbol) Nil else {
+      val chain = new ListBuffer[Symbol]()
+      var curr = this
+      while (curr ne NoSymbol) {
+        chain += curr
+        curr = curr.owner
+      }
+      chain.toList
+    }
+    final def ownerChainExists(pred: Symbol => Boolean): Boolean = if (this eq NoSymbol) false else {
+      var curr = this
+      while (curr ne NoSymbol) {
+        if (pred(curr)) return true
+        curr = curr.owner
+      }
+      false
+    }
 
     // Non-classes skip self and return rest of owner chain; overridden in ClassSymbol.
     def enclClassChain: List[Symbol] = owner.enclClassChain
@@ -3590,7 +3606,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       devWarningDumpStack("NoSymbol.owner", 15)
       this
     }
-    override def ownerChain: List[Symbol] = Nil
     override def ownersIterator: Iterator[Symbol] = Iterator.empty
     override def alternatives: List[Symbol] = List()
     override def reset(completer: Type): this.type = this

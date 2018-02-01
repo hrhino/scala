@@ -814,7 +814,7 @@ trait Implicits {
           if (sym.hasAccessorFlag) {
             val symAcc = sym.accessed // #3373
             symAcc.pos.pointOrElse(0) < ownerPos &&
-            !(owner.ownerChain exists (o => (o eq sym) || (o eq symAcc))) // probably faster to iterate only once, don't feel like duplicating hasTransOwner for this case
+            !owner.ownerChainExists(o => (o eq sym) || (o eq symAcc)) // probably faster to iterate only once, don't feel like duplicating hasTransOwner for this case
           } else !(owner hasTransOwner sym)) // faster than owner.ownerChain contains sym
       }
 

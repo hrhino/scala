@@ -550,7 +550,7 @@ abstract class RefChecks extends Transform {
         }
 
         def checkOverrideDeprecated() {
-          if (other.hasDeprecatedOverridingAnnotation && !(member.hasDeprecatedOverridingAnnotation || member.ownerChain.exists(x => x.isDeprecated || x.hasBridgeAnnotation))) {
+          if (other.hasDeprecatedOverridingAnnotation && !(member.hasDeprecatedOverridingAnnotation || member.ownerChainExists(x => x.isDeprecated || x.hasBridgeAnnotation))) {
             val version = other.deprecatedOverridingVersion.getOrElse("")
             val since   = if (version.isEmpty) version else s" (since $version)"
             val message = other.deprecatedOverridingMessage map (msg => s": $msg") getOrElse ""
@@ -1236,7 +1236,7 @@ abstract class RefChecks extends Transform {
       // If symbol is deprecated, and the point of reference is not enclosed
       // in either a deprecated member or a scala bridge method, issue a warning.
       // TODO: x.hasBridgeAnnotation doesn't seem to be needed here...
-      if (sym.isDeprecated && !currentOwner.ownerChain.exists(x => x.isDeprecated || x.hasBridgeAnnotation))
+      if (sym.isDeprecated && !currentOwner.ownerChainExists(x => x.isDeprecated || x.hasBridgeAnnotation))
         currentRun.reporting.deprecationWarning(pos, sym)
 
       // Similar to deprecation: check if the symbol is marked with @migration
@@ -1254,7 +1254,7 @@ abstract class RefChecks extends Transform {
           reporter.warning(pos, s"${sym.fullLocationString} has changed semantics in version ${sym.migrationVersion.get}:\n${sym.migrationMessage.get}")
       }
       // See an explanation of compileTimeOnly in its scaladoc at scala.annotation.compileTimeOnly.
-      if (sym.isCompileTimeOnly && !currentOwner.ownerChain.exists(x => x.isCompileTimeOnly)) {
+      if (sym.isCompileTimeOnly && !currentOwner.ownerChainExists(x => x.isCompileTimeOnly)) {
         def defaultMsg =
           sm"""Reference to ${sym.fullLocationString} should not have survived past type checking,
               |it should have been processed and eliminated during expansion of an enclosing macro."""
