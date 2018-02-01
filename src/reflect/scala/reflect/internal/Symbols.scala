@@ -2378,12 +2378,24 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     final def allOverriddenSymbols: List[Symbol] = {
       if (isOverridingSymbol) {
         // performance sensitive
-        val builder = List.newBuilder[Symbol]
-        for (o <- owner.ancestors) {
-          overriddenSymbol(o).andAlso(builder += _)
+        val builder = new ListBuffer[Symbol]()
+        var curr = owner.ancestors
+        while (curr ne Nil) {
+          overriddenSymbol(curr.head).andAlso(builder += _)
+          curr = curr.tail
         }
-        builder.result()
+        builder.toList
       } else Nil
+    }
+    final def existsOverriddenSymbol(pred: Symbol => Boolean): Boolean = {
+      if (isOverridingSymbol) {
+        var curr = owner.ancestors
+        while (curr ne Nil) {
+          if (pred(curr.head)) return true
+          else curr = curr.tail
+        }
+      }
+      false
     }
 
     private[this] var isOverridingSymbolCache = 0
