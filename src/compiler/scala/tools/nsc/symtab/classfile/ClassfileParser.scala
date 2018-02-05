@@ -90,6 +90,7 @@ abstract class ClassfileParser {
   private def readTypeName()        = readName().toTypeName
   private def readName()            = pool getName u2
   private def readType()            = pool getType u2
+  private def readString()          = pool getString u2
 
   private object unpickler extends scala.reflect.internal.pickling.UnPickler {
     val symbolTable: ClassfileParser.this.symbolTable.type = ClassfileParser.this.symbolTable
@@ -211,6 +212,17 @@ abstract class ClassfileParser {
       }
     )
 
+    def getString(index: Int): String = (
+      if (index <= 0 || len <= index) errorBadIndex(index)
+      else values(index) match {
+        case str: String => str
+        case _           =>
+          val start = firstExpecting(index, CONSTANT_UTF8)
+          val len   = in.getChar(start).toInt
+          recordAtIndex(fromMUTF8(in.buf, start, len + 2), index)
+      }
+    )
+
     private def fromMUTF8(bytes: Array[Byte], offset: Int, len: Int): String =
       new DataInputStream(new ByteArrayInputStream(bytes, offset, len)).readUTF
 
@@ -296,7 +308,7 @@ abstract class ClassfileParser {
     private def createConstant(index: Int): Constant = {
       val start = starts(index)
       Constant((in.buf(start).toInt: @switch) match {
-        case CONSTANT_STRING  => getName(in.getChar(start + 1).toInt).toString
+        case CONSTANT_STRING  => getString(in.getChar(start + 1).toInt)
         case CONSTANT_INTEGER => in.getInt(start + 1)
         case CONSTANT_FLOAT   => in.getFloat(start + 1)
         case CONSTANT_LONG    => in.getLong(start + 1)
@@ -915,7 +927,7 @@ abstract class ClassfileParser {
             //
             // TODO: can we disable this altogether? Does Scala-IDE actually intermingle source and classfiles in a way
             //       that this could ever find something?
-            val srcfileLeaf = readName().toString.trim
+            val srcfileLeaf = readString().trim
             val srcpath = sym.enclosingPackage match {
               case NoSymbol => srcfileLeaf
               case rootMirror.EmptyPackage => srcfileLeaf
@@ -962,7 +974,7 @@ abstract class ClassfileParser {
     val index = u2
     tag match {
       case STRING_TAG =>
-        Some(LiteralAnnotArg(Constant(pool.getName(index).toString)))
+        Some(LiteralAnnotArg(Constant(pool.getString(index))))
       case BOOL_TAG | BYTE_TAG | CHAR_TAG | SHORT_TAG | INT_TAG |
            LONG_TAG | FLOAT_TAG | DOUBLE_TAG =>
         Some(LiteralAnnotArg(pool.getConstant(index)))
