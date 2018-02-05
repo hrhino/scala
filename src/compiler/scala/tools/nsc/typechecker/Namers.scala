@@ -369,7 +369,7 @@ trait Namers extends MethodSynthesis {
         currentRun.symSource(clazz) = sourceFile
       }
       registerTopLevelSym(clazz)
-      assert(clazz.name.toString.indexOf('(') < 0, clazz.name)  // )
+      assert(clazz.name.indexOf('(') < 0, clazz.name)  // )
       clazz
     }
 

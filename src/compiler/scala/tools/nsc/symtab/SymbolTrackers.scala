@@ -17,7 +17,7 @@ trait SymbolTrackers {
   import global._
 
   private implicit lazy val SymbolOrdering: Ordering[Symbol] =
-    Ordering by (x => (x.kindString, x.name.toString))
+    Ordering by (x => (x.kindString, x.name))
 
   private implicit def toList[T: Ordering](xs: Set[T]): List[T] = xs.toList.sorted
 

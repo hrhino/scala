@@ -7,9 +7,8 @@ package scala
 package reflect
 package internal
 
-import scala.language.implicitConversions
-
 import scala.io.Codec
+import scala.language.implicitConversions
 
 trait Names extends api.Names {
   private final val HASH_SIZE  = 0x8000
@@ -64,16 +63,12 @@ trait Names extends api.Names {
 
   /** Enter characters into chrs array. */
   private def enterChars(cs: Array[Char], offset: Int, len: Int) {
-    var i = 0
-    while (i < len) {
-      if (nc + i == chrs.length) {
-        val newchrs = new Array[Char](chrs.length * 2)
-        java.lang.System.arraycopy(chrs, 0, newchrs, 0, chrs.length)
-        chrs = newchrs
-      }
-      chrs(nc + i) = cs(offset + i)
-      i += 1
+    if (nc + len > chrs.length) {
+      val newchrs = new Array[Char](chrs.length * 2)
+      java.lang.System.arraycopy(chrs, 0, newchrs, 0, chrs.length)
+      chrs = newchrs
     }
+    java.lang.System.arraycopy(cs, offset, chrs, nc, len)
     if (len == 0) nc += 1
     else nc = nc + len
   }
@@ -108,7 +103,7 @@ trait Names extends api.Names {
         // that name.toString will become an eager val, in which case the call
         // to enterChars cannot follow the construction of the TermName.
         var startIndex = 0
-        if (cs == chrs) {
+        if (cs eq chrs) {
           // Optimize for subName, the new name is already stored in chrs
           startIndex = offset
         } else {
@@ -236,8 +231,24 @@ trait Names extends api.Names {
     /** @return true if the string value of this name is equal
      *  to the string value of the given name or String.
      */
-    def string_==(that: Name): Boolean   = (that ne null) && (toString == that.toString)
-    def string_==(that: String): Boolean = (that ne null) && (toString == that)
+    def string_==(that: Name): Boolean   = (that ne null) && {
+      val minLen = that.len min this.len
+      var i = 0
+      while (i < minLen) {
+        if (this.charAt(i) != that.charAt(i)) return false
+        i += 1
+      }
+      that.len == this.len
+    }
+    def string_==(that: String): Boolean = (that ne null) && {
+      val minLen = that.length min this.len
+      var i = 0
+      while (i < minLen) {
+        if (this.charAt(i) != that.charAt(i)) return false
+        i += 1
+      }
+      that.length == this.len
+    }
 
     /****
      *  This has been quite useful to find places where people are comparing
@@ -267,6 +278,7 @@ trait Names extends api.Names {
     ****/
 
     /** @return the i'th Char of this name */
+    @inline
     final def charAt(i: Int): Char = chrs(index + i)
 
     /** @return the index of first occurrence of char c in this name, length if not found */
@@ -342,7 +354,7 @@ trait Names extends api.Names {
         i += 1
       i == prefix.length
     }
-    final def startsWith(prefix: String, start: Int): Boolean = {
+    final def startsWith(prefix: CharSequence, start: Int): Boolean = {
       var i = 0
       while (i < prefix.length && start + i < len &&
              chrs(index + start + i) == prefix.charAt(i))
@@ -369,13 +381,14 @@ trait Names extends api.Names {
       i > suffix.length
     }
 
-    final def containsName(subname: String): Boolean = containsName(newTermName(subname))
-    final def containsName(subname: Name): Boolean = {
+    // OPT take a CharSequence to avoid looking up / creating a Name when `subname` is a string
+    final def containsName(subname: CharSequence): Boolean = {
       var start = 0
       val last = len - subname.length
       while (start <= last && !startsWith(subname, start)) start += 1
       start <= last
     }
+
     final def containsChar(ch: Char): Boolean = {
       var i = index
       val max = index + len
@@ -385,6 +398,17 @@ trait Names extends api.Names {
         i += 1
       }
       false
+    }
+
+    final def compareTo(that: Names#Name): Int = { // meh, but see SimpleNameOrdering
+      val minLen = len min that.len
+      var i = 0
+      while (i < minLen) {
+        val diff = this.charAt(i) - that.charAt(i)
+        if (diff != 0) return diff
+        i += 1
+      }
+      this.len - that.len
     }
 
     /** Some thoroughly self-explanatory convenience functions.  They
@@ -458,39 +482,43 @@ trait Names extends api.Names {
     def append(suffix: String)  = newName(toString + suffix)
     def append(suffix: Name)    = newName(toString + suffix)
     def append(separator: Char, suffix: Name) = newName(toString + separator + suffix)
-    def prepend(prefix: String) = newName("" + prefix + this)
+    def prepend(prefix: String) = newName(prefix + this)
 
     def decodedName: ThisNameType = newName(decode)
     def isOperatorName: Boolean = decode != toString  // used by ide
     def longString: String      = nameKind + " " + decode
     def debugString = { val s = decode ; if (isTypeName) s + "!" else s }
-  }
 
-  implicit def AnyNameOps(name: Name): NameOps[Name]          = new NameOps(name)
-  implicit def TermNameOps(name: TermName): NameOps[TermName] = new NameOps(name)
-  implicit def TypeNameOps(name: TypeName): NameOps[TypeName] = new NameOps(name)
-
-  /** FIXME: This is a good example of something which is pure "value class" but cannot
-   *  reap the benefits because an (unused) $outer pointer so it is not single-field.
-   */
-  final class NameOps[T <: Name](name: T) {
     import NameTransformer._
-    def stripSuffix(suffix: String): T = if (name endsWith suffix) dropRight(suffix.length) else name // OPT avoid creating a Name with `suffix`
-    def stripSuffix(suffix: Name): T   = if (name endsWith suffix) dropRight(suffix.length) else name
-    def take(n: Int): T                = name.subName(0, n).asInstanceOf[T]
-    def drop(n: Int): T                = name.subName(n, name.length).asInstanceOf[T]
-    def dropRight(n: Int): T           = name.subName(0, name.length - n).asInstanceOf[T]
-    def dropLocal: TermName            = name.toTermName stripSuffix LOCAL_SUFFIX_STRING
-    def dropSetter: TermName           = name.toTermName stripSuffix SETTER_SUFFIX_STRING
-    def dropModule: T                  = this stripSuffix MODULE_SUFFIX_STRING
-    def localName: TermName            = getterName append LOCAL_SUFFIX_STRING
-    def setterName: TermName           = getterName append SETTER_SUFFIX_STRING
-    def getterName: TermName           = dropTraitSetterSeparator.dropSetter.dropLocal
+
+    // OPT avoid creating a Name with `suffix`
+    def stripSuffix(suffix: String): ThisNameType =
+      if (endsWith(suffix)) dropRight(suffix.length) else thisName
+    def stripSuffix(suffix: Name): ThisNameType   =
+      if (endsWith(suffix)) dropRight(suffix.len) else thisName
+    def take(n: Int): ThisNameType                =
+      subName(0, n)
+    def drop(n: Int): ThisNameType                =
+      subName(n, len)
+    def dropRight(n: Int): ThisNameType           =
+      subName(0, len - n)
+    def dropLocal: TermName                       =
+      toTermName stripSuffix LOCAL_SUFFIX_STRING
+    def dropSetter: TermName                      =
+      toTermName stripSuffix SETTER_SUFFIX_STRING
+    def dropModule: ThisNameType                  =
+      stripSuffix(MODULE_SUFFIX_STRING)
+    def localName: TermName            =
+      getterName append LOCAL_SUFFIX_STRING
+    def setterName: TermName           =
+      getterName append SETTER_SUFFIX_STRING
+    def getterName: TermName           =
+      dropTraitSetterSeparator.dropSetter.dropLocal
 
     private def dropTraitSetterSeparator: TermName =
-      name indexOf TRAIT_SETTER_SEPARATOR_STRING match {
-        case -1  => name.toTermName
-        case idx => name.toTermName drop idx drop TRAIT_SETTER_SEPARATOR_STRING.length
+      indexOf(TRAIT_SETTER_SEPARATOR_STRING) match {
+        case -1  => toTermName
+        case idx => toTermName drop (idx + TRAIT_SETTER_SEPARATOR_STRING.length)
       }
   }
 

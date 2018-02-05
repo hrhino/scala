@@ -84,9 +84,7 @@ trait StdNames {
 
   abstract class CommonNames extends NamesApi {
     type NameType >: Null <: Name
-    // Masking some implicits so as to allow our targeted => NameType.
-    protected val stringToTermName = null
-    protected val stringToTypeName = null
+
     protected implicit def createNameType(name: String): NameType
 
     def flattenedName(segments: Name*): NameType =
@@ -1029,10 +1027,11 @@ trait StdNames {
      *  For the purposes of referencing that object, the syntax is allowed.
      */
     def segments(name: String, assumeTerm: Boolean): List[Name] = {
+      val createNameType = null
       def mkName(str: String, term: Boolean): Name =
         if (term) newTermName(str) else newTypeName(str)
 
-      name.indexWhere(ch => ch == '.' || ch == '#') match {
+      wrapString(name).indexWhere(ch => ch == '.' || ch == '#') match {
         // it's the last segment: the parameter tells us whether type or term
         case -1     => if (name == "") scala.Nil else scala.List(mkName(name, assumeTerm))
         // otherwise, we can tell based on whether '#' or '.' is the following char.
@@ -1154,8 +1153,6 @@ trait StdNames {
   }
 
   sealed abstract class SymbolNames {
-    protected val stringToTermName = null
-    protected val stringToTypeName = null
     protected implicit def createNameType(s: String): TypeName = newTypeNameCached(s)
 
     final val BoxedBoolean: TypeName       = "java.lang.Boolean"

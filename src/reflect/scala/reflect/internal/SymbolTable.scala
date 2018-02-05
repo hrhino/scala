@@ -142,7 +142,7 @@ abstract class SymbolTable extends macros.Universe
   private object SimpleNameOrdering extends Ordering[Names#Name] {
     def compare(n1: Names#Name, n2: Names#Name) = (
       if (n1 eq n2) 0
-      else n1.toString compareTo n2.toString
+      else n1 compareTo n2
     )
   }
 

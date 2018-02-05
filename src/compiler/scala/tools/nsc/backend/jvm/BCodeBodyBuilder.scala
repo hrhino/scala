@@ -564,7 +564,7 @@ abstract class BCodeBodyBuilder extends BCodeSkelBuilder {
             // we initialize the MODULE$ field immediately after the super ctor
             if (!isModuleInitialized &&
               jMethodName == INSTANCE_CONSTRUCTOR_NAME &&
-              fun.symbol.javaSimpleName.toString == INSTANCE_CONSTRUCTOR_NAME &&
+              (fun.symbol.javaSimpleName string_== INSTANCE_CONSTRUCTOR_NAME) &&
               isStaticModuleClass(claszSymbol)) {
               isModuleInitialized = true
               mnode.visitVarInsn(asm.Opcodes.ALOAD, 0)

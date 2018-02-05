@@ -562,7 +562,7 @@ abstract class BTypesFromSymbols[G <: Global](val global: G) extends BTypes {
     // Primitive methods cannot be inlined, so there's no point in building a MethodInlineInfo. Also, some
     // primitive methods (e.g., `isInstanceOf`) have non-erased types, which confuses [[typeToBType]].
     val methodInlineInfos = methods.flatMap({
-      case methodSym =>
+      methodSym =>
         if (completeSilentlyAndCheckErroneous(methodSym)) {
           // Happens due to scala/bug#9111. Just don't provide any MethodInlineInfo for that method, we don't need fail the compiler.
           if (!classSym.isJavaDefined) devWarning("scala/bug#9111 should only be possible for Java classes")

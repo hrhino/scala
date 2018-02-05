@@ -35,7 +35,7 @@ trait FreshNames { self: Names with StdNames =>
     }
 
     def unapply(name: Name): Option[String] =
-      name.toString match {
+      name match {
         case freshlyNamed(prefix) => Some(prefix)
         case _                    => None
       }

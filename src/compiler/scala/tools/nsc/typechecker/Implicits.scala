@@ -1284,7 +1284,7 @@ trait Implicits {
         }
 
       /* Creates a tree representing one of the singleton manifests.*/
-      def findSingletonManifest(name: String) = typedPos(tree.pos.focus) {
+      def findSingletonManifest(name: Name) = typedPos(tree.pos.focus) {
         Select(gen.mkAttributedRef(FullManifestModule), name)
       }
 
@@ -1307,9 +1307,9 @@ trait Implicits {
             manifestOfType(tp1.deconst, FullManifestClass)
           case TypeRef(pre, sym, args) =>
             if (isPrimitiveValueClass(sym) || isPhantomClass(sym)) {
-              findSingletonManifest(sym.name.toString)
+              findSingletonManifest(sym.name.toTermName)
             } else if (sym == ObjectClass || sym == AnyRefClass) {
-              findSingletonManifest("Object")
+              findSingletonManifest(nme.Object)
             } else if (sym == RepeatedParamClass || sym == ByNameParamClass) {
               EmptyTree
             } else if (sym == ArrayClass && args.length == 1) {
