@@ -11,7 +11,6 @@ import reporters.Reporter
 trait ScaladocGlobalTrait extends Global {
   outer =>
 
-  override val useOffsetPositions = false
   override def newUnitParser(unit: CompilationUnit) = new syntaxAnalyzer.ScaladocUnitParser(unit, Nil)
   override def newJavaUnitParser(unit: CompilationUnit) = if (createJavadoc) {
     new syntaxAnalyzer.ScaladocJavaUnitParser(unit)

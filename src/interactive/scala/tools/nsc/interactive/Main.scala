@@ -14,7 +14,6 @@ object Main extends nsc.MainClass {
   override def processSettingsHook(): Boolean = {
     def run(): Unit = {
       this.settings.Xprintpos.value = true
-      this.settings.Yrangepos.value = true
       val compiler = new interactive.Global(this.settings, this.reporter)
       import compiler.{ reporter => _, _ }
 

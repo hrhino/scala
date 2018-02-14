@@ -98,7 +98,7 @@ abstract class SyntaxAnalyzer extends SubComponent with Parsers with MarkupParse
       if (unit.body == EmptyTree)
         unit.body = initialUnitBody(unit)
 
-      if (settings.Yrangepos && !reporter.hasErrors)
+      if (settings.Yvalidatepos && !reporter.hasErrors)
         validatePositions(unit.body)
 
       if (settings.Ymemberpos.isSetByUser)

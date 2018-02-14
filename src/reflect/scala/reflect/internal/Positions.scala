@@ -28,8 +28,6 @@ trait Positions extends api.Positions { self: SymbolTable =>
   val NoPosition = scala.reflect.internal.util.NoPosition
   implicit val PositionTag = ClassTag[Position](classOf[Position])
 
-  def useOffsetPositions: Boolean = true
-
   /** A position that wraps a set of trees.
    *  The point of the wrapping position is the point of the default position.
    *  If some of the trees are ranges, returns a range position enclosing all ranges
@@ -37,13 +35,11 @@ trait Positions extends api.Positions { self: SymbolTable =>
    */
   def wrappingPos(default: Position, trees: List[Tree]): Position = wrappingPos(default, trees, focus = true)
   def wrappingPos(default: Position, trees: List[Tree], focus: Boolean): Position = {
-    if (useOffsetPositions) default else {
-      val trav = new CollectTreeTraverser[Position]({ case t if t.pos.isRange => t.pos })
-      trav.traverseTrees(trees)
-      val ranged = trav.results
-      if (ranged.isEmpty) if (focus) default.focus else default
-      else Position.range(default.source, (ranged map (_.start)).min, default.point, (ranged map (_.end)).max)
-    }
+    val trav = new CollectTreeTraverser[Position]({ case t if t.pos.isRange => t.pos })
+    trav.traverseTrees(trees)
+    val ranged = trav.results
+    if (ranged.isEmpty) if (focus) default.focus else default
+    else Position.range(default.source, (ranged map (_.start)).min, default.point, (ranged map (_.end)).max)
   }
 
   /** A position that wraps the non-empty set of trees.
@@ -53,7 +49,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
    */
   def wrappingPos(trees: List[Tree]): Position = {
     val headpos = trees.head.pos
-    if (useOffsetPositions || !headpos.isDefined) headpos
+    if (!headpos.isDefined) headpos
     else wrappingPos(headpos, trees)
   }
 
@@ -64,7 +60,6 @@ trait Positions extends api.Positions { self: SymbolTable =>
    */
   def ensureNonOverlapping(tree: Tree, others: List[Tree]){ ensureNonOverlapping(tree, others, focus = true) }
   def ensureNonOverlapping(tree: Tree, others: List[Tree], focus: Boolean) {
-    if (useOffsetPositions) return
 
     def isOverlapping(pos: Position) =
       pos.isRange && (others exists (pos overlaps _.pos))
@@ -80,11 +75,9 @@ trait Positions extends api.Positions { self: SymbolTable =>
   }
 
   def rangePos(source: SourceFile, start: Int, point: Int, end: Int): Position =
-    if (useOffsetPositions) Position.offset(source, point)
-    else Position.range(source, start, point, end)
+    Position.range(source, start, point, end)
 
   def validatePositions(tree: Tree) {
-    if (useOffsetPositions) return
 
     def reportTree(prefix : String, tree : Tree) {
       val source = if (tree.pos.isDefined) tree.pos.source else ""
@@ -108,7 +101,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
     def validate(tree: Tree, encltree: Tree): Unit = {
 
       if (!tree.isEmpty && tree.canHaveAttrs) {
-        if (settings.Yposdebug && (settings.verbose || settings.Yrangepos))
+        if (settings.Yposdebug && settings.verbose)
           inform("[%10s] %s".format("validate", treeStatus(tree, encltree)))
 
         if (!tree.pos.isDefined)
@@ -308,7 +301,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
    *  This means: Set position of a node and position all its unpositioned children.
    */
   def atPos[T <: Tree](pos: Position)(tree: T): T = {
-    if (useOffsetPositions || !pos.isOpaqueRange) {
+    if (!pos.isOpaqueRange) {
       posAssigner.pos = pos
       posAssigner.traverse(tree)
       tree

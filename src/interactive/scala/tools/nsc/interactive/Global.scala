@@ -107,7 +107,6 @@ class Global(settings: Settings, _reporter: Reporter, projectName: String = "") 
    *  execution of the super constructor.
    */
   private var initializing = true
-  override val useOffsetPositions = false
 } with scala.tools.nsc.Global(settings, _reporter)
   with CompilerControl
   with ContextTrees
