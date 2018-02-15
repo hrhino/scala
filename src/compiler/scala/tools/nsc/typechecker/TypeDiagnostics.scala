@@ -65,7 +65,7 @@ trait TypeDiagnostics {
   }
 
   def setAddendum(pos: Position, msg: () => String) =
-    if (pos != NoPosition)
+    if (pos ne NoPosition)
       addendums(pos) = msg
 
   def withAddendum(pos: Position) = (_: String) + addendums.getOrElse(pos, () => "")()
@@ -770,7 +770,7 @@ trait TypeDiagnostics {
      *  @param ex     The exception that caused the error
      */
     def reportTypeError(context0: Context, pos: Position, ex: TypeError) {
-      if (ex.pos == NoPosition) ex.pos = pos
+      if (ex.pos eq NoPosition) ex.pos = pos
       // TODO: should be replaced by throwErrors
       // but it seems that throwErrors excludes some of the errors that should actually be
       // buffered, causing TypeErrors to fly around again. This needs some more investigation.

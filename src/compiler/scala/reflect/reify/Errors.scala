@@ -9,7 +9,7 @@ trait Errors {
   import global._
 
   def defaultErrorPosition = {
-    val stack = currents collect { case t: Tree if t.pos != NoPosition => t.pos }
+    val stack = currents collect { case t: Tree if t.pos ne NoPosition => t.pos }
     stack.headOption getOrElse analyzer.enclosingMacroPosition
   }
 

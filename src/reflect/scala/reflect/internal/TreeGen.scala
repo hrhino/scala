@@ -652,7 +652,7 @@ abstract class TreeGen {
      */
     def makeClosure(pos: Position, pat: Tree, body: Tree): Tree = {
       def wrapped  = wrappingPos(List(pat, body))
-      def splitpos = (if (pos != NoPosition) wrapped.withPoint(pos.point) else pos).makeTransparent
+      def splitpos = (if (pos ne NoPosition) wrapped.withPoint(pos.point) else pos).makeTransparent
       matchVarPattern(pat) match {
         case Some((name, tpt)) =>
           Function(
@@ -686,7 +686,7 @@ abstract class TreeGen {
 
     /* The position of the closure that starts with generator at position `genpos`. */
     def closurePos(genpos: Position) =
-      if (genpos == NoPosition) NoPosition
+      if (genpos eq NoPosition) NoPosition
       else {
         val end = body.pos match {
           case NoPosition => genpos.point
@@ -718,7 +718,7 @@ abstract class TreeGen {
           Yield(Block(pdefs, atPos(wrappingPos(ids)) { mkTuple(ids) }) setPos wrappingPos(pdefs)))
         val allpats = (pat :: pats) map (_.duplicate)
         val pos1 =
-          if (t.pos == NoPosition) NoPosition
+          if (t.pos eq NoPosition) NoPosition
           else rangePos(t.pos.source, t.pos.start, t.pos.point, rhs1.pos.end)
         val vfrom1 = ValFrom(atPos(wrappingPos(allpats)) { mkTuple(allpats) }, rhs1).setPos(pos1)
         mkFor(vfrom1 :: rest1, sugarBody)

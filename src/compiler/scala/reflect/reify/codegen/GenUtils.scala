@@ -109,7 +109,7 @@ trait GenUtils {
   def origin(sym: Symbol) = {
     var origin = ""
     if (sym.owner != NoSymbol) origin += "defined by %s".format(sym.owner.name)
-    if (sym.pos != NoPosition) origin += " in %s:%s:%s".format(sym.pos.source.file.name, sym.pos.line, sym.pos.column)
+    if (sym.pos ne NoPosition) origin += " in %s:%s:%s".format(sym.pos.source.file.name, sym.pos.line, sym.pos.column)
     if (origin == "") origin = "of unknown origin"
     origin
   }

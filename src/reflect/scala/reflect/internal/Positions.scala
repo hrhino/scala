@@ -227,7 +227,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
    */
   private def setChildrenPos(pos: Position, trees: List[Tree]): Unit = try {
     for (tree <- trees) {
-      if (!tree.isEmpty && tree.canHaveAttrs && tree.pos == NoPosition) {
+      if (!tree.isEmpty && tree.canHaveAttrs && (tree.pos eq NoPosition)) {
         val children = tree.children
         if (children.isEmpty) {
           tree setPos pos.focus
@@ -300,7 +300,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
     var pos: Position = _
     override def traverse(t: Tree) {
       if (!t.canHaveAttrs) ()
-      else if (t.pos == NoPosition) {
+      else if (t.pos eq NoPosition) {
         t.setPos(pos)
         t.traverse(this)   // TODO: bug? shouldn't the traverse be outside of the if?
         // @PP: it's pruning whenever it encounters a node with a
@@ -321,13 +321,13 @@ trait Positions extends api.Positions { self: SymbolTable =>
   /** Position a tree.
    *  This means: Set position of a node and position all its unpositioned children.
    */
-  def atPos[T <: Tree](pos: Position)(tree0: T): T = {
+  def atPos[T <: Tree](pos: Position)(tree0: T): T = if (tree0.pos ne NoPosition) tree0 else {
     def loop(tree: Tree): Unit =
       if (!pos.isOpaqueRange) {
         posAssigner.pos = pos
         posAssigner.traverse(tree)
       } else {
-        if (!tree.isEmpty && tree.canHaveAttrs && tree.pos == NoPosition) {
+        if (!tree.isEmpty && tree.canHaveAttrs && (tree.pos eq NoPosition)) {
           tree.setPos(pos)
           val children = tree.children
           if (children.nonEmpty) {

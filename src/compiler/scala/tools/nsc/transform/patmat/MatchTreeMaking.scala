@@ -632,7 +632,7 @@ trait MatchTreeMaking extends MatchCodeGen with Debugging {
       currentOwner = origOwner
 
       override def traverse(t: Tree) {
-        if (t != EmptyTree && t.pos == NoPosition) {
+        if (t != EmptyTree && (t.pos eq NoPosition)) {
           t.setPos(pos)
         }
         t match {

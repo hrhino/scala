@@ -1055,10 +1055,10 @@ trait ReificationSupport { self: SymbolTable =>
       }
 
       private def derivedPos(t: Tree, offset: Int): Position =
-        if (t.pos == NoPosition) NoPosition else t.pos.withPoint(offset)
+        if (t.pos eq NoPosition) NoPosition else t.pos.withPoint(offset)
 
       private def derivedOffset(pos: Position): Int =
-        if (pos == NoPosition) -1 else pos.point
+        if (pos eq NoPosition) -1 else pos.point
 
       def apply(expr: Tree, selectors: List[Tree]): Import = {
         val importSelectors = selectors.map {

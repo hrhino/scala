@@ -400,7 +400,7 @@ trait Implicits {
     def ctx_s = fullSiteString(context)
     typingLog("start", s"`$tree_s`$undet_s, searching for adaptation to pt=$pt $ctx_s")
 
-    def pos = if (pos0 != NoPosition) pos0 else tree.pos
+    def pos = if (pos0 ne NoPosition) pos0 else tree.pos
 
     def failure(what: Any, reason: String, pos: Position = this.pos): SearchResult = {
       if (settings.XlogImplicits)

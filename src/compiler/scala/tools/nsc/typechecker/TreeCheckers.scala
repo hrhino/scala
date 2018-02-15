@@ -333,7 +333,7 @@ abstract class TreeCheckers extends Analyzer {
             return
           case _ =>
         }
-        if (tree.pos == NoPosition)
+        if (tree.pos eq NoPosition)
           noPos(tree)
         else if (tree.tpe == null && isPastTyper)
           noType(tree)

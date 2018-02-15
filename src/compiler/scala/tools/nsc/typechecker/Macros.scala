@@ -796,7 +796,7 @@ trait Macros extends MacroRuntimes with Traces with Helpers {
             // to allow `macro1` to see the range position of the "foo".
             val expandedPos = enclosingMacroPosition.focus
             def fixPosition(pos: Position) =
-              if (pos == NoPosition) expandedPos else pos.focus
+              if (pos eq NoPosition) expandedPos else pos.focus
             expanded.foreach(t => t.pos = fixPosition(t.pos))
 
             val result = atPos(enclosingMacroPosition.focus)(expanded)

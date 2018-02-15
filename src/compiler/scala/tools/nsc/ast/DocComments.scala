@@ -405,7 +405,7 @@ trait DocComments { self: Global =>
     }
 
     private def subPos(start: Int, end: Int) =
-      if (pos == NoPosition) NoPosition
+      if (pos eq NoPosition) NoPosition
       else {
         val start1 = pos.start + start
         val end1 = pos.end + end

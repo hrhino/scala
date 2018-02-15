@@ -42,7 +42,7 @@ trait AccessorSynthesis extends Transform with ast.TreeDSL {
       /** The position of given symbol, or, if this is undefined,
         * the position of the current class.
         */
-      private def position(sym: Symbol) = if (sym.pos == NoPosition) clazz.pos else sym.pos
+      private def position(sym: Symbol) = if (sym.pos eq NoPosition) clazz.pos else sym.pos
 
       /** Add new method definition.
         *
@@ -197,7 +197,7 @@ trait AccessorSynthesis extends Transform with ast.TreeDSL {
     def slowPathFor(lzyVal: Symbol): Symbol = _slowPathFor(lzyVal)
 
     def newSlowPathSymbol(lzyVal: Symbol): Symbol = {
-      val pos = if (lzyVal.pos != NoPosition) lzyVal.pos else clazz.pos.focus // TODO: is the else branch ever taken?
+      val pos = if (lzyVal.pos ne NoPosition) lzyVal.pos else clazz.pos.focus // TODO: is the else branch ever taken?
       val sym = clazz.newMethod(nme.newLazyValSlowComputeName(lzyVal.name.toTermName), pos, PRIVATE) setInfo MethodType(Nil, lzyVal.tpe.resultType)
       _slowPathFor(lzyVal) = sym
       sym

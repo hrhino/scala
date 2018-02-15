@@ -382,7 +382,7 @@ trait ContextErrors {
       def SelectWithUnderlyingError(sel: Tree, err: AbsTypeError) = {
         // if there's no position, this is likely the result of a MissingRequirementError
         // use the position of the selection we failed to type check to report the original message
-        if (err.errPos == NoPosition) issueNormalTypeError(sel, err.errMsg)
+        if (err.errPos eq NoPosition) issueNormalTypeError(sel, err.errMsg)
         else issueTypeError(err)
         setError(sel)
       }

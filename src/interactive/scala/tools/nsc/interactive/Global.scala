@@ -417,7 +417,7 @@ class Global(settings: Settings, _reporter: Reporter, projectName: String = "") 
       breakable{
         loop = false
         if (!interruptsEnabled) return
-        if (pos == NoPosition || nodesSeen % yieldPeriod == 0)
+        if ((pos eq NoPosition) || nodesSeen % yieldPeriod == 0)
           Thread.`yield`()
 
         def nodeWithWork(): Option[WorkEvent] =

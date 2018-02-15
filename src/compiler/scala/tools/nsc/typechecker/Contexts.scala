@@ -590,7 +590,7 @@ trait Contexts { self: Analyzer =>
     def warning(pos: Position, msg: String)                                  = reporter.warning(fixPosition(pos), msg)
     def echo(pos: Position, msg: String)                                     = reporter.echo(fixPosition(pos), msg)
     def fixPosition(pos: Position): Position = pos match {
-      case NoPosition => nextEnclosing(_.tree.pos != NoPosition).tree.pos
+      case NoPosition => nextEnclosing(_.tree.pos ne NoPosition).tree.pos
       case _ => pos
     }
 
@@ -1465,7 +1465,7 @@ trait Contexts { self: Analyzer =>
         if (result == NoSymbol)
           selectors = selectors.tail
       }
-      if (record && settings.warnUnusedImport && selectors.nonEmpty && result != NoSymbol && pos != NoPosition)
+      if (record && settings.warnUnusedImport && selectors.nonEmpty && result != NoSymbol && (pos ne NoPosition))
         recordUsage(current, result)
 
       // Harden against the fallout from bugs like scala/bug#6745

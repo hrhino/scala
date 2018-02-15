@@ -418,7 +418,7 @@ trait Importers { to: SymbolTable =>
         tryFixup()
         // we have to be careful with position import as some shared trees
         // like EmptyTree, noSelfType don't support position assignment
-        if (their.pos != NoPosition) {
+        if (their.pos ne NoPosition) {
           my.setPos(importPosition(their.pos))
         }
       }

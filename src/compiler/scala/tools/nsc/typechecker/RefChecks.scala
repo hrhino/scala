@@ -537,7 +537,7 @@ abstract class RefChecks extends Transform {
                 // might mask some inconsistencies -- check overrides
                 checkedCombinations += rt.parents
                 val tsym = rt.typeSymbol
-                if (tsym.pos == NoPosition) tsym setPos member.pos
+                if (tsym.pos eq NoPosition) tsym setPos member.pos
                 checkAllOverrides(tsym, typesOnly = true)
               case _ =>
             }
