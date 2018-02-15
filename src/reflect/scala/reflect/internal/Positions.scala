@@ -2,7 +2,6 @@ package scala
 package reflect
 package internal
 
-import scala.collection.mutable
 import util._
 import scala.collection.mutable.ListBuffer
 
@@ -38,11 +37,35 @@ trait Positions extends api.Positions { self: SymbolTable =>
   def wrappingPos(default: Position, trees: List[Tree]): Position = wrappingPos(default, trees, focus = true)
   def wrappingPos(default: Position, trees: List[Tree], focus: Boolean): Position = {
     if (StatisticsStatics.areSomeColdStatsEnabled()) incCounter(wrappingPosCount)
-    val trav = new CollectTreeTraverser[Position]({ case t if t.pos.isRange => t.pos })
-    trav.traverseTrees(trees)
-    val ranged = trav.results
-    if (ranged.isEmpty) if (focus) default.focus else default
-    else Position.range(default.source, (ranged map (_.start)).min, default.point, (ranged map (_.end)).max)
+    WrappingPosTraverser.reset()
+    WrappingPosTraverser.traverseTrees(trees)
+    WrappingPosTraverser.result(default, focus)
+  }
+
+  private object WrappingPosTraverser extends InternalTraverser {
+    var start = Int.MaxValue
+    var end = Int.MinValue
+
+    def reset(): Unit = { start = Int.MaxValue; end = Int.MinValue }
+    def result(default: Position, focus: Boolean) = {
+      if (start == Int.MaxValue) {
+        if (focus) default.focus else default
+      } else {
+        Position.range(default.source, start, default.point, end)
+      }
+    }
+
+    override def traverse(tree: Tree): Unit = {
+      val pos = tree.pos
+      if (pos.isRange) {
+        if (pos.isTransparent) {
+          tree traverse this
+        } else {
+          start = start min pos.start
+          end = end max pos.end
+        }
+      }
+    }
   }
 
   /** A position that wraps the non-empty set of trees.
@@ -179,11 +202,6 @@ trait Positions extends api.Positions { self: SymbolTable =>
         r :: insert(rs1, t, conflicting)
       }
   }
-
-  /** Replace elem `t` of `ts` by `replacement` list. */
-  private def replace(ts: List[Tree], t: Tree, replacement: List[Tree]): List[Tree] =
-    if (ts.head == t) replacement ::: ts.tail
-    else ts.head :: replace(ts.tail, t, replacement)
 
   /** Does given list of trees have mutually non-overlapping positions?
    *  pre: None of the trees is transparent

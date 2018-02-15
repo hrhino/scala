@@ -30,9 +30,7 @@ object Position {
   val tabInc = 8
 
   private def validate[T <: Position](pos: T): T = {
-    if (pos.isRange)
-      assert(pos.start <= pos.end, s"bad position: ${pos.show}")
-
+    assert(pos.start <= pos.end, s"bad position: ${pos.show}")
     pos
   }
 
@@ -47,7 +45,7 @@ object Position {
     prefix + (pos showError msg)
   }
 
-  def offset(source: SourceFile, point: Int): Position                            = validate(new OffsetPosition(source, point))
+  def offset(source: SourceFile, point: Int): Position                            =          new OffsetPosition(source, point)
   def range(source: SourceFile, start: Int, point: Int, end: Int): Position       = validate(new RangePosition(source, start, point, end))
   def transparent(source: SourceFile, start: Int, point: Int, end: Int): Position = validate(new TransparentPosition(source, start, point, end))
 }
