@@ -9,6 +9,4 @@ package interactive
 @deprecated("Use scala.reflect.internal.Positions", "2.11.0")
 trait RangePositions extends scala.reflect.internal.Positions with ast.Trees with ast.Positions {
   self: scala.tools.nsc.Global =>
-
-  override val useOffsetPositions = false
 }

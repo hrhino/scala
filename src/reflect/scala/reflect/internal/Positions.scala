@@ -28,6 +28,8 @@ trait Positions extends api.Positions { self: SymbolTable =>
   val NoPosition = scala.reflect.internal.util.NoPosition
   implicit val PositionTag = ClassTag[Position](classOf[Position])
 
+  import statistics._
+
   /** A position that wraps a set of trees.
    *  The point of the wrapping position is the point of the default position.
    *  If some of the trees are ranges, returns a range position enclosing all ranges
@@ -35,6 +37,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
    */
   def wrappingPos(default: Position, trees: List[Tree]): Position = wrappingPos(default, trees, focus = true)
   def wrappingPos(default: Position, trees: List[Tree], focus: Boolean): Position = {
+    if (StatisticsStatics.areSomeColdStatsEnabled()) incCounter(wrappingPosCount)
     val trav = new CollectTreeTraverser[Position]({ case t if t.pos.isRange => t.pos })
     trav.traverseTrees(trees)
     val ranged = trav.results
@@ -300,22 +303,29 @@ trait Positions extends api.Positions { self: SymbolTable =>
   /** Position a tree.
    *  This means: Set position of a node and position all its unpositioned children.
    */
-  def atPos[T <: Tree](pos: Position)(tree: T): T = {
-    if (!pos.isOpaqueRange) {
-      posAssigner.pos = pos
-      posAssigner.traverse(tree)
-      tree
-    }
-    else {
-      if (!tree.isEmpty && tree.canHaveAttrs && tree.pos == NoPosition) {
-        tree.setPos(pos)
-        val children = tree.children
-        if (children.nonEmpty) {
-          if (children.tail.isEmpty) atPos(pos)(children.head)
-          else setChildrenPos(pos, children)
+  def atPos[T <: Tree](pos: Position)(tree0: T): T = {
+    def loop(tree: Tree): Unit =
+      if (!pos.isOpaqueRange) {
+        posAssigner.pos = pos
+        posAssigner.traverse(tree)
+      } else {
+        if (!tree.isEmpty && tree.canHaveAttrs && tree.pos == NoPosition) {
+          tree.setPos(pos)
+          val children = tree.children
+          if (children.nonEmpty) {
+            if (children.tail.isEmpty) loop(children.head)
+            else setChildrenPos(pos, children)
+          }
         }
       }
-      tree
-    }
+    val timer = if (StatisticsStatics.areSomeColdStatsEnabled()) startTimer(atPosTimer) else null
+    loop(tree0)
+    if (StatisticsStatics.areSomeColdStatsEnabled()) stopTimer(atPosTimer, timer)
+    tree0
   }
+}
+
+trait PositionStats { this: Statistics =>
+  val atPosTimer       = newTimer("atPos")
+  val wrappingPosCount = newCounter("#wrappingPos")
 }
