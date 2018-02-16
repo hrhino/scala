@@ -84,9 +84,7 @@ trait StdNames {
 
   abstract class CommonNames extends NamesApi {
     type NameType >: Null <: Name
-    // Masking some implicits so as to allow our targeted => NameType.
-    protected val stringToTermName = null
-    protected val stringToTypeName = null
+
     protected implicit def createNameType(name: String): NameType
 
     def flattenedName(segments: Name*): NameType =
@@ -1154,8 +1152,6 @@ trait StdNames {
   }
 
   sealed abstract class SymbolNames {
-    protected val stringToTermName = null
-    protected val stringToTypeName = null
     protected implicit def createNameType(s: String): TypeName = newTypeNameCached(s)
 
     final val BoxedBoolean: TypeName       = "java.lang.Boolean"

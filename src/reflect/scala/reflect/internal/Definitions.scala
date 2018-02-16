@@ -1547,7 +1547,7 @@ trait Definitions extends api.StandardDefinitions {
         (owner == MethodHandleClass || owner == VarHandleClass) && sym.hasAnnotation(PolymorphicSignatureClass)
       }
 
-      lazy val Scala_Java8_CompatPackage = rootMirror.getPackageIfDefined("scala.runtime.java8")
+      lazy val Scala_Java8_CompatPackage = rootMirror.getPackageIfDefined(TermName("scala.runtime.java8"))
     }
   }
 }
