@@ -186,15 +186,13 @@ trait Names extends api.Names {
     type ThisNameType >: Null <: Name
     protected[this] def thisName: ThisNameType
 
-    // Note that "Name with ThisNameType" should be redundant
-    // because ThisNameType <: Name, but due to scala/bug#6161 the
-    // compile loses track of this fact.
+    override def toString: String = ""
 
     /** Index into name table */
     def start: Int = index
 
     /** The next name in the same hash bucket. */
-    def next: Name with ThisNameType
+    def next: ThisNameType
 
     /** The length of this name. */
     final def length: Int = len
@@ -210,14 +208,14 @@ trait Names extends api.Names {
     def bothNames: List[Name] = List(toTermName, toTypeName)
 
     /** Return the subname with characters from from to to-1. */
-    def subName(from: Int, to: Int): Name with ThisNameType
+    def subName(from: Int, to: Int): ThisNameType
     override def subSequence(from: Int, to: Int): CharSequence = subName(from, to)
 
     /** Return a new name of the same variety. */
-    def newName(str: String): Name with ThisNameType
+    def newName(str: String): ThisNameType
 
     /** Return a new name based on string transformation. */
-    def mapName(f: String => String): Name with ThisNameType = newName(f(toString))
+    def mapName(f: String => String): ThisNameType = newName(f(toString))
 
     /** Copy bytes of this name to buffer cs, starting at position `offset`. */
     final def copyChars(cs: Array[Char], offset: Int) =
@@ -464,33 +462,30 @@ trait Names extends api.Names {
     def isOperatorName: Boolean = decode != toString  // used by ide
     def longString: String      = nameKind + " " + decode
     def debugString = { val s = decode ; if (isTypeName) s + "!" else s }
-  }
 
-  implicit def AnyNameOps(name: Name): NameOps[Name]          = new NameOps(name)
-  implicit def TermNameOps(name: TermName): NameOps[TermName] = new NameOps(name)
-  implicit def TypeNameOps(name: TypeName): NameOps[TypeName] = new NameOps(name)
-
-  /** FIXME: This is a good example of something which is pure "value class" but cannot
-   *  reap the benefits because an (unused) $outer pointer so it is not single-field.
-   */
-  final class NameOps[T <: Name](name: T) {
     import NameTransformer._
-    def stripSuffix(suffix: String): T = if (name endsWith suffix) dropRight(suffix.length) else name // OPT avoid creating a Name with `suffix`
-    def stripSuffix(suffix: Name): T   = if (name endsWith suffix) dropRight(suffix.length) else name
-    def take(n: Int): T                = name.subName(0, n).asInstanceOf[T]
-    def drop(n: Int): T                = name.subName(n, name.length).asInstanceOf[T]
-    def dropRight(n: Int): T           = name.subName(0, name.length - n).asInstanceOf[T]
-    def dropLocal: TermName            = name.toTermName stripSuffix LOCAL_SUFFIX_STRING
-    def dropSetter: TermName           = name.toTermName stripSuffix SETTER_SUFFIX_STRING
-    def dropModule: T                  = this stripSuffix MODULE_SUFFIX_STRING
-    def localName: TermName            = getterName append LOCAL_SUFFIX_STRING
-    def setterName: TermName           = getterName append SETTER_SUFFIX_STRING
-    def getterName: TermName           = dropTraitSetterSeparator.dropSetter.dropLocal
+
+    final def stripSuffix(suffix: String): ThisNameType =  // OPT avoid creating a Name with `suffix`
+      if (endsWith(suffix)) dropRight(suffix.length) else thisName
+    final def stripSuffix(suffix: Name): ThisNameType   =
+      if (endsWith(suffix)) dropRight(suffix.length) else thisName
+
+    final def take(n: Int): ThisNameType      = subName(0, n)
+    final def drop(n: Int): ThisNameType      = subName(n, length)
+    final def dropRight(n: Int): ThisNameType = subName(0, length - n)
+
+    final def dropLocal: TermName             = toTermName stripSuffix LOCAL_SUFFIX_STRING
+    final def dropSetter: TermName            = toTermName stripSuffix SETTER_SUFFIX_STRING
+    final def dropModule: ThisNameType        = this stripSuffix MODULE_SUFFIX_STRING
+
+    final def localName: TermName             = getterName append LOCAL_SUFFIX_STRING
+    final def setterName: TermName            = getterName append SETTER_SUFFIX_STRING
+    final def getterName: TermName            = dropTraitSetterSeparator.dropSetter.dropLocal
 
     private def dropTraitSetterSeparator: TermName =
-      name indexOf TRAIT_SETTER_SEPARATOR_STRING match {
-        case -1  => name.toTermName
-        case idx => name.toTermName drop idx drop TRAIT_SETTER_SEPARATOR_STRING.length
+      indexOf(TRAIT_SETTER_SEPARATOR_STRING) match {
+        case -1  => toTermName
+        case idx => toTermName drop (idx + TRAIT_SETTER_SEPARATOR_STRING.length)
       }
   }
 

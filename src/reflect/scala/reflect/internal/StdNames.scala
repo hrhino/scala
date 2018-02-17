@@ -1027,6 +1027,7 @@ trait StdNames {
      *  For the purposes of referencing that object, the syntax is allowed.
      */
     def segments(name: String, assumeTerm: Boolean): List[Name] = {
+      def createNameType = null // because in here we want `name.take` to come from `wrapString`
       def mkName(str: String, term: Boolean): Name =
         if (term) newTermName(str) else newTypeName(str)
 
