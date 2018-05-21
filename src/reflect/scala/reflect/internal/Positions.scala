@@ -2,7 +2,6 @@ package scala
 package reflect
 package internal
 
-import scala.collection.mutable
 import util._
 import scala.collection.mutable.ListBuffer
 
@@ -37,12 +36,32 @@ trait Positions extends api.Positions { self: SymbolTable =>
    */
   def wrappingPos(default: Position, trees: List[Tree]): Position = wrappingPos(default, trees, focus = true)
   def wrappingPos(default: Position, trees: List[Tree], focus: Boolean): Position = {
-    if (useOffsetPositions) default else {
-      val trav = new CollectTreeTraverser[Position]({ case t if t.pos.isRange => t.pos })
-      trav.traverseTrees(trees)
-      val ranged = trav.results
-      if (ranged.isEmpty) if (focus) default.focus else default
-      else Position.range(default.source, (ranged map (_.start)).min, default.point, (ranged map (_.end)).max)
+    if (useOffsetPositions || (trees eq Nil)) default
+    else WrappingPosTraverser.wrappingPos(trees, default, focus)
+  }
+
+  object WrappingPosTraverser extends InternalTraverser {
+    def wrappingPos(trees: List[Tree], default: Position, focus: Boolean): Position = {
+      start = Int.MaxValue
+      end = Int.MinValue
+      traverseTrees(trees)
+      if (start == Int.MaxValue || end == Int.MinValue) {
+        if (focus) default.focus else default
+      } else {
+        Position.range(default.source, start, default.point, end)
+      }
+    }
+
+    private[this] var start, end : Int = _
+    override def traverse(tree: Tree): Unit = {
+      val pos = tree.pos
+      if (pos.isRange) {
+        start = Math.min(start, pos.start)
+        end = Math.max(end, pos.end)
+        if (pos.isTransparent) {
+          super.traverse(tree)
+        }
+      }
     }
   }
 
