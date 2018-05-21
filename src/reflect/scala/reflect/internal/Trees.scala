@@ -59,7 +59,7 @@ trait Trees extends api.Trees {
 
     def isDef = false
 
-    def isEmpty = false
+    def isEmpty = this eq EmptyTree // OPT overridden only in TypeTree
     def nonEmpty = !isEmpty
 
     def canHaveAttrs = true
@@ -1426,7 +1426,6 @@ trait Trees extends api.Trees {
   }
 
   case object EmptyTree extends TermTree with CannotHaveAttrs {
-    override def isEmpty = true
     val asList = List(this)
     override def transform(transformer: Transformer): Tree = this
   }
