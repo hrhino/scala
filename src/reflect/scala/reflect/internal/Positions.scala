@@ -203,11 +203,6 @@ trait Positions extends api.Positions { self: SymbolTable =>
       }
   }
 
-  /** Replace elem `t` of `ts` by `replacement` list. */
-  private def replace(ts: List[Tree], t: Tree, replacement: List[Tree]): List[Tree] =
-    if (ts.head == t) replacement ::: ts.tail
-    else ts.head :: replace(ts.tail, t, replacement)
-
   /** Does given list of trees have mutually non-overlapping positions?
    *  pre: None of the trees is transparent
    */
@@ -231,8 +226,11 @@ trait Positions extends api.Positions { self: SymbolTable =>
    *  @param  trees  The children to position. All children must be positionable.
    */
   private def setChildrenPos(pos: Position, trees: List[Tree]): Unit = try {
-    for (tree <- trees) {
-      if (!tree.isEmpty && tree.canHaveAttrs && tree.pos == NoPosition) {
+    var curr = trees
+    while (curr ne Nil) {
+      val tree = curr.head
+      curr = curr.tail
+      if ((tree.pos eq NoPosition) && !tree.isEmpty && tree.canHaveAttrs) {
         val children = tree.children
         if (children.isEmpty) {
           tree setPos pos.focus
