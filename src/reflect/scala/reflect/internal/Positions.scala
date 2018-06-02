@@ -126,7 +126,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
               reportTree("Enclosed", tree)
             }
 
-          findOverlapping(tree.children flatMap solidDescendants) match {
+          findOverlapping(solidDescendants(tree)) match {
             case List() => ;
             case xs => {
               positionError("Overlapping trees "+xs.map { case (x, y) => (x.id, y.id) }.mkString("", ", ", "")) {
@@ -139,7 +139,7 @@ trait Positions extends api.Positions { self: SymbolTable =>
             }
           }
         }
-        for (ct <- tree.children flatMap solidDescendants) validate(ct, tree)
+        for (ct <- solidDescendants(tree)) validate(ct, tree)
       }
     }
 
@@ -147,9 +147,23 @@ trait Positions extends api.Positions { self: SymbolTable =>
       validate(tree, tree)
   }
 
-  def solidDescendants(tree: Tree): List[Tree] =
-    if (tree.pos.isTransparent) tree.children flatMap solidDescendants
-    else List(tree)
+  object solidDescendants extends Traverser with (Tree => List[Tree]) {
+    private val result = ListBuffer.empty[Tree]
+    def apply(tree: Tree): List[Tree] = {
+      // don't include `tree` itself
+      super.traverse(tree)
+      val r = result.toList
+      result.clear()
+      r
+    }
+
+    // don't traverse annotations
+    override def traverseModifiers(mods: Modifiers): Unit = ()
+    override def traverse(tree: Tree): Unit = {
+      if (tree.pos.isTransparent) super.traverse(tree)
+      else result += tree
+    }
+  }
 
   /** A free range from `lo` to `hi` */
   private def free(lo: Int, hi: Int): Range =

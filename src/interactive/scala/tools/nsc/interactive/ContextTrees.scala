@@ -65,7 +65,7 @@ trait ContextTrees { self: Global =>
 
   /** Returns the ContextTree containing `pos`, or the ContextTree positioned just before `pos`,
    *  or None if `pos` is located before all ContextTrees.
-   */ 
+   */
   def locateContextTree(contexts: Contexts, pos: Position): Option[ContextTree] = {
     if (contexts.isEmpty) None
     else {
@@ -109,7 +109,7 @@ trait ContextTrees { self: Global =>
   def addContext(contexts: Contexts, context: Context): Unit = {
     val cpos = context.tree.pos
     if (cpos.isTransparent)
-      for (t <- context.tree.children flatMap solidDescendants)
+      for (t <- solidDescendants(context.tree))
         addContext(contexts, context, t.pos)
     else
       addContext(contexts, context, cpos)
