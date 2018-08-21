@@ -210,11 +210,11 @@ trait Trees extends api.Trees {
       new ForeachPartialTreeTraverser(pf).traverse(this)
     }
 
-    def changeOwner(pairs: (Symbol, Symbol)*): Tree = {
-      pairs.foldLeft(this) { case (t, (oldOwner, newOwner)) =>
-        new ChangeOwnerTraverser(oldOwner, newOwner) apply t
-      }
-    }
+    def changeOwner(from: Symbol, to: Symbol): Tree =
+      new ChangeOwnerTraverser(from, to) apply this
+
+    def changeOwner(pairs: (Symbol, Symbol)*): Tree =
+      pairs.foldLeft(this)(_ changeOwner _)
 
     def shallowDuplicate: Tree = new ShallowDuplicator(this) transform this
     def shortClass: String = (getClass.getName split "[.$]").last
