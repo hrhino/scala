@@ -726,20 +726,15 @@ trait Typers extends Adaptations with Tags with TypersTracking with PatternTyper
      *  @return if feature check is run immediately: true if feature is enabled, false otherwise
      *          if feature check is delayed or suppressed because we are past typer: true
      */
-    def checkFeature(pos: Position, featureTrait: Symbol, construct: => String = "", immediate: Boolean = false): Boolean =
+    def checkFeature(pos: Position, feature: LanguageFeature, construct: => String = "", immediate: Boolean = false): Boolean =
       if (isPastTyper) true
       else {
-        val nestedOwners =
-          featureTrait.owner.ownerChain.takeWhile(_ != languageFeatureModule.moduleClass).reverse
-        val featureName = (nestedOwners map (_.name + ".")).mkString + featureTrait.name
         def action(): Boolean = {
-          def hasImport = inferImplicitByType(featureTrait.tpe, context).isSuccess
-          def hasOption = settings.language contains featureName
+          def hasImport = inferImplicitByType(feature.tpe, context).isSuccess
+          def hasOption = settings.language contains feature.name
           val OK = hasImport || hasOption
           if (!OK) {
-            val Some(AnnotationInfo(_, List(Literal(Constant(featureDesc: String)), Literal(Constant(required: Boolean))), _)) =
-              featureTrait getAnnotation LanguageFeatureAnnot
-            context.featureWarning(pos, featureName, featureDesc, featureTrait, construct, required)
+            context.featureWarning(pos, feature, construct)
           }
           OK
         }

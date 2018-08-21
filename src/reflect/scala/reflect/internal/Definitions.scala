@@ -1246,7 +1246,12 @@ trait Definitions extends api.StandardDefinitions {
       throw new FatalError(owner + " does not have a " + what + " " + name + addendum)
     }
 
-    def getLanguageFeature(name: String, owner: Symbol = languageFeatureModule): Symbol = getMember(owner, newTypeName(name))
+
+    def getLanguageFeature(name: String, owner: Symbol = languageFeatureModule): LanguageFeature = {
+      val feature = getMember(owner, newTypeName(name))
+      val path = feature.ownerChain.takeWhile(_ != languageFeatureModule.moduleClass).reverseMap(_.name)
+      LanguageFeature(feature, path.mkString("."))
+    }
 
     def termMember(owner: Symbol, name: String): Symbol = owner.info.member(newTermName(name))
 

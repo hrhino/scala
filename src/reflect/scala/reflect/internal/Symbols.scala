@@ -3611,6 +3611,14 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
   lazy val NoSymbol: NoSymbol = makeNoSymbol
 
+  /** A symbol representing a language feature, along with some useful information. */
+  case class LanguageFeature(sym: Symbol, name: String) {
+    def tpe = sym.tpe
+    val AnnotationInfo(_, List(
+          Literal(Constant(desc: String)),
+          Literal(Constant(required: Boolean))
+        ), _) = sym.getAnnotation(LanguageFeatureAnnot).get
+  }
   /** Derives a new list of symbols from the given list by mapping the given
    *  list across the given function.  Then fixes the info of all the new symbols
    *  by substituting the new symbols for the original symbols.

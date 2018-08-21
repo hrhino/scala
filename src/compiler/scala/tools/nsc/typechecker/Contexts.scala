@@ -609,8 +609,8 @@ trait Contexts { self: Analyzer =>
     def deprecationWarning(pos: Position, sym: Symbol): Unit =
       currentRun.reporting.deprecationWarning(fixPosition(pos), sym) // TODO: allow this to escalate to an error, and implicit search will ignore deprecated implicits
 
-    def featureWarning(pos: Position, featureName: String, featureDesc: String, featureTrait: Symbol, construct: => String = "", required: Boolean): Unit =
-      currentRun.reporting.featureWarning(fixPosition(pos), featureName, featureDesc, featureTrait, construct, required)
+    def featureWarning(pos: Position, feature: LanguageFeature, construct: => String = ""): Unit =
+      currentRun.reporting.featureWarning(fixPosition(pos), feature.name, feature.desc, feature.sym, construct, feature.required)
 
 
     // nextOuter determines which context is searched next for implicits

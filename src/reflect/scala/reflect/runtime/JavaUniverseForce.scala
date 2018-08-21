@@ -190,6 +190,7 @@ trait JavaUniverseForce { self: runtime.JavaUniverse  =>
     this.SubTypePair
     this.SymbolKind
     this.NoSymbol
+    this.LanguageFeature
     this.CyclicReference
     this.SymbolOps
     this.TermName
