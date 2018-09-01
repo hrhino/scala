@@ -18,6 +18,7 @@ import javax.swing.event.TreeModelListener
 import javax.swing.tree._
 
 import scala.concurrent.Lock
+import scala.reflect.internal.TreeTags
 import scala.text._
 
 /**
@@ -38,11 +39,13 @@ abstract class TreeBrowsers {
 
   /** Pseudo tree class, so that all JTree nodes are treated uniformly */
   case class ProgramTree(units: List[UnitTree]) extends Tree {
+    def tag = TreeTags.OTHERtree
     override def toString: String = "Program"
   }
 
   /** Pseudo tree class, so that all JTree nodes are treated uniformly */
   case class UnitTree(unit: CompilationUnit) extends Tree {
+    def tag = TreeTags.OTHERtree
     override def toString: String = unit.toString
   }
 

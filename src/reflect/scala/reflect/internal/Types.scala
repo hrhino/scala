@@ -211,6 +211,7 @@ trait Types
   }
 
   case object UnmappableTree extends TermTree {
+    override def tag = TreeTags.OTHERtree
     override def toString = "<unmappable>"
     super.setType(NoType)
     override def tpe_=(t: Type) = if (t != NoType) {

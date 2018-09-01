@@ -16,10 +16,12 @@ package typechecker
 import scala.collection.{immutable, mutable}
 import scala.reflect.internal.util.{ListOfNil, Statistics, StatisticsStatics}
 import scala.reflect.internal.TypesStats
+import scala.reflect.internal.TreeTags._
 import mutable.ListBuffer
 import symtab.Flags._
 import Mode._
 import scala.reflect.macros.whitebox
+import scala.annotation.switch
 
 // Suggestion check whether we can do without priming scopes with symbols of outer scopes,
 // like the IDE does.
@@ -5528,79 +5530,67 @@ trait Typers extends Adaptations with Tags with TypersTracking with PatternTyper
       }
 
       // Trees only allowed during pattern mode.
-      def typedInPatternMode(tree: Tree): Tree = tree match {
-        case tree: Alternative => typedAlternative(tree)
-        case tree: Star        => typedStar(tree)
-        case _                 => abort(s"unexpected tree in pattern mode: ${tree.getClass}\n$tree")
-      }
-
-      def typedTypTree(tree: TypTree): Tree = tree match {
-        case tree: TypeTree                     => typedTypeTree(tree)
-        case tree: AppliedTypeTree              => typedAppliedTypeTree(tree)
-        case tree: TypeBoundsTree               => typedTypeBoundsTree(tree)
-        case tree: SingletonTypeTree            => typedSingletonTypeTree(tree)
-        case tree: SelectFromTypeTree           => typedSelect(tree, typedType(tree.qualifier, mode), tree.name)
-        case tree: CompoundTypeTree             => typedCompoundTypeTree(tree)
-        case tree: ExistentialTypeTree          => typedExistentialTypeTree(tree)
-        case tree: TypeTreeWithDeferredRefCheck => tree // TODO: retype the wrapped tree? TTWDRC would have to change to hold the wrapped tree (not a closure)
-        case _                                  => abort(s"unexpected type-representing tree: ${tree.getClass}\n$tree")
-      }
-
-      def typedMemberDef(tree: MemberDef): Tree = tree match {
-        case tree: ValDef     => typedValDef(tree)
-        case tree: DefDef     => defDefTyper(tree).typedDefDef(tree)
-        case tree: ClassDef   => newTyper(context.makeNewScope(tree, sym)).typedClassDef(tree)
-        case tree: ModuleDef  => newTyper(context.makeNewScope(tree, sym.moduleClass)).typedModuleDef(tree)
-        case tree: TypeDef    => typedTypeDef(tree)
-        case tree: PackageDef => typedPackageDef(tree)
-        case _                => abort(s"unexpected member def: ${tree.getClass}\n$tree")
+      def typedInPatternMode(tree: Tree, tag: Int): Tree = (tag : @switch) match {
+        case ALTERNATIVEtree => typedAlternative(tree.asInstanceOf[Alternative])
+        case STARtree        => typedStar(tree.asInstanceOf[Star])
+        case _               => abort(s"unexpected tree in pattern mode: ${tree.getClass}\n$tree")
       }
 
       // Trees not allowed during pattern mode.
-      def typedOutsidePatternMode(tree: Tree): Tree = tree match {
-        case tree: Block            => typerWithLocalContext(context.makeNewScope(tree, context.owner))(_.typedBlock(tree, mode, pt))
-        case tree: If               => typedIf(tree)
-        case tree: TypeApply        => typedTypeApply(tree)
-        case tree: Function         => typedFunction(tree)
-        case tree: Match            => typedVirtualizedMatch(tree)
-        case tree: New              => typedNew(tree)
-        case tree: Assign           => typedAssign(tree.lhs, tree.rhs)
-        case tree: AssignOrNamedArg => typedAssign(tree.lhs, tree.rhs) // called by NamesDefaults in silent typecheck
-        case tree: Super            => typedSuper(tree)
-        case tree: Annotated        => typedAnnotated(tree)
-        case tree: Return           => typedReturn(tree)
-        case tree: Try              => typedTry(tree)
-        case tree: Throw            => typedThrow(tree)
-        case tree: ArrayValue       => typedArrayValue(tree)
-        case tree: ApplyDynamic     => typedApplyDynamic(tree)
-        case tree: ReferenceToBoxed => typedReferenceToBoxed(tree)
-        case tree: LabelDef         => labelTyper(tree).typedLabelDef(tree)
-        case tree: DocDef           => typedDocDef(tree, mode, pt)
-        case _                      => abort(s"unexpected tree: ${tree.getClass}\n$tree")
-      }
-
-      // Trees allowed in or out of pattern mode.
-      def typedInAnyMode(tree: Tree): Tree = tree match {
-        case tree: Ident   => typedIdentOrWildcard(tree)
-        case tree: Bind    => typedBind(tree)
-        case tree: Apply   => typedApply(tree)
-        case tree: Select  => typedSelectOrSuperCall(tree)
-        case tree: Literal => typedLiteral(tree)
-        case tree: Typed   => typedTyped(tree)
-        case tree: This    => typedThis(tree)  // scala/bug#6104
-        case tree: UnApply => abort(s"unexpected UnApply $tree") // turns out UnApply never reaches here
-        case _             =>
-          if (mode.inPatternMode)
-            typedInPatternMode(tree)
-          else
-            typedOutsidePatternMode(tree)
+      def typedOutsidePatternMode(tree: Tree, tag: Int): Tree = (tag : @switch) match {
+        case BLOCKtree            => typerWithLocalContext(context.makeNewScope(tree, context.owner))(_.typedBlock(tree.asInstanceOf[Block], mode, pt))
+        case IFtree               => typedIf(tree.asInstanceOf[If])
+        case TYPEAPPLYtree        => typedTypeApply(tree.asInstanceOf[TypeApply])
+        case FUNCTIONtree         => typedFunction(tree.asInstanceOf[Function])
+        case MATCHtree            => typedVirtualizedMatch(tree.asInstanceOf[Match])
+        case NEWtree              => typedNew(tree.asInstanceOf[New])
+        case ASSIGNtree           => val assign = tree.asInstanceOf[Assign]; typedAssign(assign.lhs, assign.rhs)
+        case ASSIGNORNAMEDARGtree => val assign = tree.asInstanceOf[AssignOrNamedArg]; typedAssign(assign.lhs, assign.rhs) // called by NamesDefaults in silent typecheck
+        case SUPERtree            => typedSuper(tree.asInstanceOf[Super])
+        case ANNOTATEDtree        => typedAnnotated(tree.asInstanceOf[Annotated])
+        case RETURNtree           => typedReturn(tree.asInstanceOf[Return])
+        case TREtree              => typedTry(tree.asInstanceOf[Try])
+        case THROWtree            => typedThrow(tree.asInstanceOf[Throw])
+        case ARRAYVALUEtree       => typedArrayValue(tree.asInstanceOf[ArrayValue])
+        case APPLYDYNAMICtree     => typedApplyDynamic(tree.asInstanceOf[ApplyDynamic])
+        case REFERENCETOBOXEDtree => typedReferenceToBoxed(tree.asInstanceOf[ReferenceToBoxed])
+        case LABELtree            => val label = tree.asInstanceOf[LabelDef]; labelTyper(label).typedLabelDef(label)
+        case DOCDEFtree           => typedDocDef(tree.asInstanceOf[DocDef], mode, pt)
+        case _                    => abort(s"unexpected tree: ${tree.getClass}\n$tree")
       }
 
       // begin typed1
-      tree match {
-        case tree: TypTree   => typedTypTree(tree)
-        case tree: MemberDef => typedMemberDef(tree)
-        case _               => typedInAnyMode(tree)
+      (tree.tag : @switch) match {
+        // TypTrees
+        case TYPEtree                           => typedTypeTree(tree.asInstanceOf[TypeTree])
+        case APPLIEDTYPEtree                    => typedAppliedTypeTree(tree.asInstanceOf[AppliedTypeTree])
+        case TYPEBOUNDStree                     => typedTypeBoundsTree(tree.asInstanceOf[TypeBoundsTree])
+        case SINGLETONTYPEtree                  => typedSingletonTypeTree(tree.asInstanceOf[SingletonTypeTree])
+        case SELECTFROMTYPEtree                 => val sftt = tree.asInstanceOf[SelectFromTypeTree]; typedSelect(sftt, typedType(sftt.qualifier, mode), sftt.name)
+        case COMPOUNDTYPEtree                   => typedCompoundTypeTree(tree.asInstanceOf[CompoundTypeTree])
+        case EXISTENTIALTYPEtree                => typedExistentialTypeTree(tree.asInstanceOf[ExistentialTypeTree])
+        case TYPEWITHDEFERREDREFCHECKtree       => tree // TODO: retype the wrapped tree? TTWDRC would have to change to hold the wrapped tree (not a closure)
+        // MemberDefs
+        case VALDEFtree                         => typedValDef(tree.asInstanceOf[ValDef])
+        case DEFDEFtree                         => val dd = tree.asInstanceOf[DefDef] ; defDefTyper(dd).typedDefDef(dd)
+        case CLASStree                          => newTyper(context.makeNewScope(tree, sym)).typedClassDef(tree.asInstanceOf[ClassDef])
+        case MODULEtree                         => newTyper(context.makeNewScope(tree, sym.moduleClass)).typedModuleDef(tree.asInstanceOf[ModuleDef])
+        case TYPEDEFtree                        => typedTypeDef(tree.asInstanceOf[TypeDef])
+        case PACKAGEtree                        => typedPackageDef(tree.asInstanceOf[PackageDef])
+        // Trees allowed in or out of pattern mode.
+        case IDENTtree                          => typedIdentOrWildcard(tree.asInstanceOf[Ident])
+        case BINDtree                           => typedBind(tree.asInstanceOf[Bind])
+        case APPLYtree                          => typedApply(tree.asInstanceOf[Apply])
+        case SELECTtree                         => typedSelectOrSuperCall(tree.asInstanceOf[Select])
+        case LITERALtree                        => typedLiteral(tree.asInstanceOf[Literal])
+        case TYPEDtree                          => typedTyped(tree.asInstanceOf[Typed])
+        case THIStree                           => typedThis(tree.asInstanceOf[This])  // scala/bug#6104
+        case UNAPPLYtree                        => abort(s"unexpected UnApply $tree") // turns out UnApply never reaches here
+        case tag                                =>
+          if (mode.inPatternMode)
+            typedInPatternMode(tree, tag)
+          else
+            typedOutsidePatternMode(tree, tag)
       }
     }
 

@@ -80,7 +80,7 @@ trait Translations {
     case _: AnnotatedType              => picklerTag(tpe.underlying)
   }
 
-  def picklerSubTag(tree: Tree): Int = tree match {
+  def picklerSubTag(tree: Tree): Int = tree.tag/*tree match {
     case EmptyTree              => EMPTYtree
     case _: PackageDef          => PACKAGEtree
     case _: ClassDef            => CLASStree
@@ -124,6 +124,6 @@ trait Translations {
     case _: AppliedTypeTree     => APPLIEDTYPEtree
     case _: TypeBoundsTree      => TYPEBOUNDStree
     case _: ExistentialTypeTree => EXISTENTIALTYPEtree
-  }
+  }*/
 }
 

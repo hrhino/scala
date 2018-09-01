@@ -15,6 +15,8 @@ import util.{Statistics, StatisticsStatics}
 trait Trees extends api.Trees {
   self: SymbolTable =>
 
+  import TreeTags._
+
   private[scala] var nodeCount = 0
 
   protected def treeLine(t: Tree): String =
@@ -35,6 +37,8 @@ trait Trees extends api.Trees {
   }
 
   abstract class Tree extends TreeContextApiImpl with Attachable with Product {
+    def tag: Int
+
     val id = nodeCount // TODO: add to attachment?
     nodeCount += 1
 
@@ -286,6 +290,7 @@ trait Trees extends api.Trees {
 
   case class PackageDef(pid: RefTree, stats: List[Tree])
        extends MemberDef with PackageDefApi {
+    def tag  = PACKAGEtree
     def name = pid.name
     def mods = NoMods
   }
@@ -296,7 +301,9 @@ trait Trees extends api.Trees {
   }
 
   case class ClassDef(mods: Modifiers, name: TypeName, tparams: List[TypeDef], impl: Template)
-       extends ImplDef with ClassDefApi
+       extends ImplDef with ClassDefApi {
+    def tag = CLASStree
+  }
   object ClassDef extends ClassDefExtractor {
     /** @param sym       the class symbol
      *  @param impl      the implementation template
@@ -319,7 +326,9 @@ trait Trees extends api.Trees {
   }
 
   case class ModuleDef(mods: Modifiers, name: TermName, impl: Template)
-        extends ImplDef with ModuleDefApi
+        extends ImplDef with ModuleDefApi {
+    def tag = MODULEtree
+  }
   object ModuleDef extends ModuleDefExtractor {
     /**
      *  @param sym       the class symbol
@@ -345,14 +354,18 @@ trait Trees extends api.Trees {
     }
   }
 
-  case class ValDef(mods: Modifiers, name: TermName, tpt: Tree, rhs: Tree) extends ValOrDefDef with ValDefApi
+  case class ValDef(mods: Modifiers, name: TermName, tpt: Tree, rhs: Tree) extends ValOrDefDef with ValDefApi {
+    def tag = VALDEFtree
+  }
   object ValDef extends ValDefExtractor {
     def apply(sym: Symbol): ValDef            = newValDef(sym, EmptyTree)()
     def apply(sym: Symbol, rhs: Tree): ValDef = newValDef(sym, rhs)()
   }
 
   case class DefDef(mods: Modifiers, name: TermName, tparams: List[TypeDef],
-                    vparamss: List[List[ValDef]], tpt: Tree, rhs: Tree) extends ValOrDefDef with DefDefApi
+                    vparamss: List[List[ValDef]], tpt: Tree, rhs: Tree) extends ValOrDefDef with DefDefApi {
+    def tag = DEFDEFtree
+  }
   object DefDef extends DefDefExtractor {
     def apply(sym: Symbol, rhs: Tree): DefDef                                                = newDefDef(sym, rhs)()
     def apply(sym: Symbol, vparamss: List[List[ValDef]], rhs: Tree): DefDef                  = newDefDef(sym, rhs)(vparamss = vparamss)
@@ -362,7 +375,9 @@ trait Trees extends api.Trees {
   }
 
   case class TypeDef(mods: Modifiers, name: TypeName, tparams: List[TypeDef], rhs: Tree)
-       extends MemberDef with TypeDefApi
+       extends MemberDef with TypeDefApi {
+    def tag = TYPEDEFtree
+  }
   object TypeDef extends TypeDefExtractor {
     /** A TypeDef node which defines abstract type or type parameter for given `sym` */
     def apply(sym: Symbol): TypeDef            = newTypeDef(sym, TypeBoundsTree(sym))()
@@ -370,7 +385,9 @@ trait Trees extends api.Trees {
   }
 
   case class LabelDef(name: TermName, params: List[Ident], rhs: Tree)
-       extends DefTree with TermTree with LabelDefApi
+       extends DefTree with TermTree with LabelDefApi {
+    def tag = LABELtree
+  }
   object LabelDef extends LabelDefExtractor {
     def apply(sym: Symbol, params: List[Symbol], rhs: Tree): LabelDef =
       atPos(sym.pos) {
@@ -385,35 +402,51 @@ trait Trees extends api.Trees {
   }
 
   case class Import(expr: Tree, selectors: List[ImportSelector])
-       extends SymTree with ImportApi
+       extends SymTree with ImportApi {
+    def tag = IMPORTtree
+  }
   object Import extends ImportExtractor
 
   case class Template(parents: List[Tree], self: ValDef, body: List[Tree])
-       extends SymTree with TemplateApi
+       extends SymTree with TemplateApi {
+    def tag = TEMPLATEtree
+  }
   object Template extends TemplateExtractor
 
   case class Block(stats: List[Tree], expr: Tree)
-       extends TermTree with BlockApi
+       extends TermTree with BlockApi {
+    def tag = BLOCKtree
+  }
   object Block extends BlockExtractor
 
   case class CaseDef(pat: Tree, guard: Tree, body: Tree)
-       extends Tree with CaseDefApi
+       extends Tree with CaseDefApi {
+    def tag = CASEtree
+  }
   object CaseDef extends CaseDefExtractor
 
   case class Alternative(trees: List[Tree])
-       extends TermTree with AlternativeApi
+       extends TermTree with AlternativeApi {
+    def tag = ALTERNATIVEtree
+  }
   object Alternative extends AlternativeExtractor
 
   case class Star(elem: Tree)
-       extends TermTree with StarApi
+       extends TermTree with StarApi {
+    def tag = STARtree
+  }
   object Star extends StarExtractor
 
   case class Bind(name: Name, body: Tree)
-       extends DefTree with BindApi
+       extends DefTree with BindApi {
+    def tag = BINDtree
+  }
   object Bind extends BindExtractor
 
   case class UnApply(fun: Tree, args: List[Tree])
-       extends TermTree with UnApplyApi
+       extends TermTree with UnApplyApi {
+    def tag = UNAPPLYtree
+  }
   object UnApply extends UnApplyExtractor
 
   /** An array of expressions. This AST node needs to be translated in backend.
@@ -432,45 +465,67 @@ trait Trees extends api.Trees {
    *      Literal("%s%d"),
    *      ArrayValue(<Any>, List(Ident("foo"), Literal(42))))
    */
-  case class ArrayValue(elemtpt: Tree, elems: List[Tree]) extends TermTree
+  case class ArrayValue(elemtpt: Tree, elems: List[Tree]) extends TermTree {
+    def tag = ARRAYVALUEtree
+  }
 
   case class Function(vparams: List[ValDef], body: Tree)
-       extends SymTree with TermTree with FunctionApi
+       extends SymTree with TermTree with FunctionApi {
+    def tag = FUNCTIONtree
+  }
   object Function extends FunctionExtractor
 
   case class Assign(lhs: Tree, rhs: Tree)
-       extends TermTree with AssignApi
+       extends TermTree with AssignApi {
+    def tag = ASSIGNtree
+  }
   object Assign extends AssignExtractor
 
   case class AssignOrNamedArg(lhs: Tree, rhs: Tree)
-       extends TermTree with AssignOrNamedArgApi
+       extends TermTree with AssignOrNamedArgApi {
+    def tag = ASSIGNORNAMEDARGtree
+  }
   object AssignOrNamedArg extends AssignOrNamedArgExtractor
 
   case class If(cond: Tree, thenp: Tree, elsep: Tree)
-       extends TermTree with IfApi
+       extends TermTree with IfApi {
+    def tag = IFtree
+  }
   object If extends IfExtractor
 
   case class Match(selector: Tree, cases: List[CaseDef])
-       extends TermTree with MatchApi
+       extends TermTree with MatchApi {
+    def tag = MATCHtree
+  }
   object Match extends MatchExtractor
 
   case class Return(expr: Tree)
-       extends SymTree with TermTree with ReturnApi
+       extends SymTree with TermTree with ReturnApi {
+    def tag = RETURNtree
+  }
   object Return extends ReturnExtractor
 
   case class Try(block: Tree, catches: List[CaseDef], finalizer: Tree)
-       extends TermTree with TryApi
+       extends TermTree with TryApi {
+    def tag = TREtree
+  }
   object Try extends TryExtractor
 
   case class Throw(expr: Tree)
-       extends TermTree with ThrowApi
+       extends TermTree with ThrowApi {
+    def tag = THROWtree
+  }
   object Throw extends ThrowExtractor
 
-  case class New(tpt: Tree) extends TermTree with NewApi
+  case class New(tpt: Tree) extends TermTree with NewApi {
+    def tag = NEWtree
+  }
   object New extends NewExtractor
 
   case class Typed(expr: Tree, tpt: Tree)
-       extends TermTree with TypedApi
+       extends TermTree with TypedApi {
+    def tag = TYPEDtree
+  }
   object Typed extends TypedExtractor
 
   // represents `expr _`, as specified in Method Values of spec/06-expressions.md
@@ -489,8 +544,9 @@ trait Trees extends api.Trees {
 
   case class TypeApply(fun: Tree, args: List[Tree])
        extends GenericApply with TypeApplyApi {
-
     assert(fun.isTerm, fun)
+
+    def tag = TYPEAPPLYtree
 
     override def symbol: Symbol = fun.symbol
     override def symbol_=(sym: Symbol) { fun.symbol = sym }
@@ -499,6 +555,7 @@ trait Trees extends api.Trees {
 
   case class Apply(fun: Tree, args: List[Tree])
        extends GenericApply with ApplyApi {
+    def tag = APPLYtree
     override def symbol: Symbol = fun.symbol
     override def symbol_=(sym: Symbol) { fun.symbol = sym }
   }
@@ -524,20 +581,26 @@ trait Trees extends api.Trees {
     Apply(init, args.toList)
   }
 
-  case class ApplyDynamic(qual: Tree, args: List[Tree]) extends SymTree with TermTree
+  case class ApplyDynamic(qual: Tree, args: List[Tree]) extends SymTree with TermTree {
+    def tag = APPLYDYNAMICtree
+  }
 
   case class Super(qual: Tree, mix: TypeName) extends TermTree with SuperApi {
+    def tag = SUPERtree
     override def symbol: Symbol = qual.symbol
     override def symbol_=(sym: Symbol) { qual.symbol = sym }
   }
   object Super extends SuperExtractor
 
   case class This(qual: TypeName)
-        extends SymTree with TermTree with ThisApi
+        extends SymTree with TermTree with ThisApi {
+    def tag = THIStree
+  }
   object This extends ThisExtractor
 
   case class Select(qualifier: Tree, name: Name)
        extends RefTree with SelectApi {
+    def tag = SELECTtree
 
     // !!! assert disabled due to test case pos/annotDepMethType.scala triggering it.
     // assert(qualifier.isTerm, qualifier)
@@ -545,12 +608,14 @@ trait Trees extends api.Trees {
   object Select extends SelectExtractor
 
   case class Ident(name: Name) extends RefTree with IdentApi {
+    def tag = IDENTtree
     def qualifier: Tree = EmptyTree
     def isBackquoted = this.hasAttachment[BackquotedIdentifierAttachment.type]
   }
   object Ident extends IdentExtractor
 
   case class ReferenceToBoxed(ident: Ident) extends TermTree with ReferenceToBoxedApi {
+    def tag = REFERENCETOBOXEDtree
     override def symbol: Symbol = ident.symbol
     override def symbol_=(sym: Symbol) { ident.symbol = sym }
   }
@@ -559,32 +624,40 @@ trait Trees extends api.Trees {
   case class Literal(value: Constant)
         extends TermTree with LiteralApi {
     assert(value ne null)
+    def tag = LITERALtree
   }
   object Literal extends LiteralExtractor
 
 //  @deprecated("will be removed and then be re-introduced with changed semantics, use Literal(Constant(x)) instead")
 //  def Literal(x: Any) = new Literal(Constant(x))
 
-  case class Annotated(annot: Tree, arg: Tree) extends Tree with AnnotatedApi
+  case class Annotated(annot: Tree, arg: Tree) extends Tree with AnnotatedApi {
+    def tag = ANNOTATEDtree
+  }
   object Annotated extends AnnotatedExtractor
 
   case class SingletonTypeTree(ref: Tree)
-        extends TypTree with SingletonTypeTreeApi
+        extends TypTree with SingletonTypeTreeApi {
+    def tag = SINGLETONTYPEtree
+  }
   object SingletonTypeTree extends SingletonTypeTreeExtractor
 
   case class SelectFromTypeTree(qualifier: Tree, name: TypeName)
        extends RefTree with TypTree with SelectFromTypeTreeApi {
-
     assert(qualifier.isType, qualifier)
+    def tag = SELECTFROMTYPEtree
   }
   object SelectFromTypeTree extends SelectFromTypeTreeExtractor
 
   case class CompoundTypeTree(templ: Template)
-       extends TypTree with CompoundTypeTreeApi
+       extends TypTree with CompoundTypeTreeApi {
+    def tag = COMPOUNDTYPEtree
+  }
   object CompoundTypeTree extends CompoundTypeTreeExtractor
 
   case class AppliedTypeTree(tpt: Tree, args: List[Tree])
        extends TypTree with AppliedTypeTreeApi {
+    def tag = APPLIEDTYPEtree
 
     assert(tpt.isType, tpt)
 
@@ -594,14 +667,19 @@ trait Trees extends api.Trees {
   object AppliedTypeTree extends AppliedTypeTreeExtractor
 
   case class TypeBoundsTree(lo: Tree, hi: Tree)
-       extends TypTree with TypeBoundsTreeApi
+       extends TypTree with TypeBoundsTreeApi {
+    def tag = TYPEBOUNDStree
+  }
   object TypeBoundsTree extends TypeBoundsTreeExtractor
 
   case class ExistentialTypeTree(tpt: Tree, whereClauses: List[MemberDef])
-       extends TypTree with ExistentialTypeTreeApi
+       extends TypTree with ExistentialTypeTreeApi {
+    def tag = EXISTENTIALTYPEtree
+  }
   object ExistentialTypeTree extends ExistentialTypeTreeExtractor
 
   case class TypeTree() extends TypTree with TypeTreeApi {
+    def tag = TYPEtree
     private var orig: Tree = null
     /** Was this type tree originally empty? That is, does it now contain
       * an inferred type that must be forgotten in `resetAttrs` to
@@ -1101,7 +1179,11 @@ trait Trees extends api.Trees {
     )
   }
 
-  case object EmptyTree extends TermTree with CannotHaveAttrs { override def isEmpty = true; val asList = List(this) }
+  case object EmptyTree extends TermTree with CannotHaveAttrs {
+    override def tag = EMPTYtree
+    override def isEmpty = true
+    val asList = List(this)
+  }
   object noSelfType extends ValDef(Modifiers(PRIVATE), nme.WILDCARD, TypeTree(NoType), EmptyTree) with CannotHaveAttrs
   object pendingSuperCall extends Apply(Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR), List()) with CannotHaveAttrs
 
@@ -1933,4 +2015,55 @@ trait TreesStats {
   val nodeByType = newByClass("#created tree nodes by type")(newCounter(""))
   val retainedCount  = newCounter("#retained tree nodes")
   val retainedByType = newByClass("#retained tree nodes by type")(newCounter(""))
+}
+
+object TreeTags {
+  final val OTHERtree = -1
+  final val EMPTYtree = 1
+  final val PACKAGEtree = 2
+  final val CLASStree = 3
+  final val MODULEtree = 4
+  final val VALDEFtree = 5
+  final val DEFDEFtree = 6
+  final val TYPEDEFtree = 7
+  final val LABELtree = 8
+  final val IMPORTtree = 9
+  final val DOCDEFtree = 11
+  final val TEMPLATEtree = 12
+  final val BLOCKtree = 13
+  final val CASEtree = 14
+  // final val SEQUENCEtree = 15
+  final val ALTERNATIVEtree = 16
+  final val STARtree = 17
+  final val BINDtree = 18
+  final val UNAPPLYtree = 19
+  final val ARRAYVALUEtree = 20
+  final val FUNCTIONtree = 21
+  final val ASSIGNtree = 22
+  final val IFtree = 23
+  final val MATCHtree = 24
+  final val RETURNtree = 25
+  final val TREtree = 26
+  final val THROWtree = 27
+  final val NEWtree = 28
+  final val TYPEDtree = 29
+  final val TYPEAPPLYtree = 30
+  final val APPLYtree = 31
+  final val APPLYDYNAMICtree = 32
+  final val SUPERtree = 33
+  final val THIStree = 34
+  final val SELECTtree = 35
+  final val IDENTtree = 36
+  final val LITERALtree = 37
+  final val TYPEtree = 38
+  final val ANNOTATEDtree = 39
+  final val SINGLETONTYPEtree = 40
+  final val SELECTFROMTYPEtree = 41
+  final val COMPOUNDTYPEtree = 42
+  final val APPLIEDTYPEtree = 43
+  final val TYPEBOUNDStree = 44
+  final val EXISTENTIALTYPEtree = 45
+  final val ASSIGNORNAMEDARGtree = 46
+  final val REFERENCETOBOXEDtree = 47
+  final val TYPEWITHDEFERREDREFCHECKtree = 48
 }

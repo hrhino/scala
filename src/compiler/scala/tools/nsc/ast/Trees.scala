@@ -10,13 +10,17 @@ import scala.reflect.ClassTag
 import scala.compat.Platform.EOL
 
 trait Trees extends scala.reflect.internal.Trees { self: Global =>
+  import scala.reflect.internal.TreeTags._
   // --- additional cases --------------------------------------------------------
   /** Only used during parsing */
-  case class Parens(args: List[Tree]) extends Tree
+  case class Parens(args: List[Tree]) extends Tree {
+    def tag = OTHERtree
+  }
 
   /** Documented definition, eliminated by analyzer */
   case class DocDef(comment: DocComment, definition: Tree)
        extends Tree {
+    override def tag = DOCDEFtree
     override def symbol: Symbol = definition.symbol
     override def symbol_=(sym: Symbol) { definition.symbol = sym }
     override def isDef = definition.isDef
@@ -26,18 +30,24 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
 
  /** Array selection `<qualifier> . <name>` only used during erasure */
   case class SelectFromArray(qualifier: Tree, name: Name, erasure: Type)
-       extends RefTree with TermTree
+       extends RefTree with TermTree {
+   def tag = OTHERtree
+ }
 
   /** Derived value class injection (equivalent to: `new C(arg)` after erasure); only used during erasure.
    *  The class `C` is stored as a tree attachment.
    */
   case class InjectDerivedValue(arg: Tree)
-       extends SymTree with TermTree
+       extends SymTree with TermTree {
+    def tag = OTHERtree
+  }
 
   class PostfixSelect(qual: Tree, name: Name) extends Select(qual, name)
 
   /** emitted by typer, eliminated by refchecks */
-  case class TypeTreeWithDeferredRefCheck()(val check: () => TypeTree) extends TypTree
+  case class TypeTreeWithDeferredRefCheck()(val check: () => TypeTree) extends TypTree {
+    def tag = TYPEWITHDEFERREDREFCHECKtree
+  }
 
   // --- factory methods ----------------------------------------------------------
 
