@@ -453,8 +453,9 @@ abstract class Erasure extends InfoTransform
 
   class EnterBridges(unit: CompilationUnit, root: Symbol) {
 
-    class BridgesCursor(root: Symbol) extends overridingPairs.Cursor(root) {
-      override def parents              = root.info.firstParent :: Nil
+    class BridgesCursor(root: Symbol) extends {
+      override val parents = root.info.firstParent :: Nil
+    } with overridingPairs.Cursor(root) {
       // Varargs bridges may need generic bridges due to the non-repeated part of the signature of the involved methods.
       // The vararg bridge is generated during refchecks (probably to simplify override checking),
       // but then the resulting varargs "bridge" method may itself need an actual erasure bridge.
@@ -923,7 +924,7 @@ abstract class Erasure extends InfoTransform
         log(s"Considering for erasure clash:\n$pair")
         !exitingRefchecks(lowType matches highType) && sameTypeAfterErasure(low, high)
       }
-      (new DoubleDefsCursor(root)).iterator filter isErasureDoubleDef foreach doubleDefError
+      new DoubleDefsCursor(root) filter isErasureDoubleDef foreach doubleDefError
     }
 
     /**  Add bridge definitions to a template. This means:

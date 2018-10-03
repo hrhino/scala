@@ -698,7 +698,7 @@ trait TypeDiagnostics {
         def isImplementation(m: Symbol): Boolean = {
           def classOf(s: Symbol): Symbol = if (s.isClass || s == NoSymbol) s else classOf(s.owner)
           val opc = new overridingPairs.Cursor(classOf(m))
-          opc.iterator.exists(pair => pair.low == m)
+          opc.exists(pair => pair.low == m)
         }
         def isConvention(p: Symbol): Boolean = {
           (p.name.decoded == "args" && p.owner.isMethod && p.owner.name.decoded == "main") ||

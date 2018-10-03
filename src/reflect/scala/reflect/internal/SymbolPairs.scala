@@ -88,12 +88,11 @@ abstract class SymbolPairs {
   /** The cursor class
    *  @param base   the base class containing the participating symbols
    */
-  abstract class Cursor(val base: Symbol) {
+  abstract class Cursor(val base: Symbol) extends Iterator[SymbolPair] {
     cursor =>
 
       final val self  = base.thisType   // The type relative to which symbols are seen.
     private val decls = newScope        // all the symbols which can take part in a pair.
-    private val size  = bases.length
 
     /** A symbol for which exclude returns true will not appear as
      *  either end of a pair.
@@ -108,14 +107,15 @@ abstract class SymbolPairs {
 
     /** The parents and base classes of `base`.  Can be refined in subclasses.
      */
-    protected def parents: List[Type] = base.info.parents
-    protected def bases: List[Symbol] = base.info.baseClasses
+    protected val parents: List[Type] = base.info.parents
+    protected val bases: List[Symbol] = base.info.baseClasses
+    private   val nBases              = bases.length
 
     /** An implementation of BitSets as arrays (maybe consider collection.BitSet
      *  for that?) The main purpose of this is to implement
      *  intersectionContainsElement efficiently.
      */
-    private type BitSet = Array[Int]
+    private type BitSet = Array[Long]
 
     /** A mapping from all base class indices to a bitset
      *  which indicates whether parents are subclasses.
@@ -127,12 +127,12 @@ abstract class SymbolPairs {
      *     p isSubClass b
      *     p.baseType(b) == self.baseType(b)
      */
-    private val subParents = new Array[BitSet](size)
+    private val subParents = new Array[BitSet](nBases)
 
     /** A map from baseclasses of <base> to ints, with smaller ints meaning lower in
      *  linearization order. Symbols that are not baseclasses map to -1.
      */
-    private val index = new mutable.HashMap[Symbol, Int] { override def default(key: Symbol) = -1 }
+    private val index = new mutable.AnyRefMap[Symbol, Int](_ => -1, nBases << 1)
 
     /** The scope entries that have already been visited as highSymbol
      *  (but may have been excluded via hasCommonParentAsSubclass.)
@@ -181,18 +181,21 @@ abstract class SymbolPairs {
         }
       }
       var i = 0
+      val bsSize = ((nBases - 1) >> 5) + 1 // roundUp(nBases/32) (we know it's > 0)
       for (bc <- bases) {
         index(bc) = i
-        subParents(i) = new BitSet(size)
+        subParents(i) = new BitSet(bsSize)
         i += 1
       }
       for (p <- parents) {
         val pIndex = index(p.typeSymbol)
         if (pIndex >= 0)
-          for (bc <- p.baseClasses ; if sameInBaseClass(bc)(p, self)) {
-            val bcIndex = index(bc)
-            if (bcIndex >= 0)
-              include(subParents(bcIndex), pIndex)
+          for (bc <- p.baseClasses) {
+            if (sameInBaseClass(bc)(p, self)) {
+              val bcIndex = index(bc)
+              if (bcIndex >= 0)
+                include(subParents(bcIndex), pIndex)
+            }
           }
       }
       // first, deferred (this will need to change if we change lookup rules!)
@@ -270,22 +273,21 @@ abstract class SymbolPairs {
 
     def hasNext     = curEntry ne null
     def currentPair = new SymbolPair(base, low, high)
-    def iterator    = new Iterator[SymbolPair] {
-      def hasNext = cursor.hasNext
-      def next()  = try cursor.currentPair finally cursor.next()
-    }
+    @deprecated("SymbolPairs$Cursor is already an Iterator", since = "2.12.8")
+    final def iterator: Iterator[SymbolPair] = this
 
     // Note that next is called once during object initialization to
     // populate the fields tracking the current symbol pair.
-    def next() {
-      if (curEntry ne null) {
-        lowSymbol = curEntry.sym
-        advanceNextEntry()        // sets highSymbol
-        if (nextEntry eq null) {
-          advanceCurEntry()
-          next()
+    def next(): SymbolPair =
+      try currentPair finally {
+        if (curEntry ne null) {
+          lowSymbol = curEntry.sym
+          advanceNextEntry()        // sets highSymbol
+          if (nextEntry eq null) {
+            advanceCurEntry()
+            next()
+          }
         }
       }
-    }
   }
 }
