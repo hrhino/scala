@@ -324,11 +324,14 @@ abstract class RefChecks extends Transform {
         val member   = low
         val other    = high
 
+        val memberOwner = low.owner
+        val otherOwner  = high.owner
+
 //        debuglog(s"Checking validity of ${member.fullLocationString} overriding ${other.fullLocationString}")
 
         def noErrorType = !pair.isErroneous
         def isRootOrNone(sym: Symbol) = sym != null && sym.isRoot || sym == NoSymbol
-        def isNeitherInClass = member.owner != pair.base && other.owner != pair.base
+        def isNeitherInClass = memberOwner != pair.base && otherOwner != pair.base
 
         def objectOverrideErrorMsg = (
           "overriding " + high.fullLocationString + " with " + low.fullLocationString + ":\n" +
@@ -338,7 +341,7 @@ abstract class RefChecks extends Transform {
 
         def overrideErrorMsg(msg: String): String = {
           val isConcreteOverAbstract =
-            (other.owner isSubClass member.owner) && other.isDeferred && !member.isDeferred
+            (otherOwner isSubClass memberOwner) && other.isDeferred && !member.isDeferred
           val addendum =
             if (isConcreteOverAbstract)
               ";\n (Note that %s is abstract,\n  and is therefore overridden by concrete %s)".format(
@@ -352,7 +355,7 @@ abstract class RefChecks extends Transform {
           s"overriding ${infoStringWithLocation(other)};\n ${infoString(member)} $msg$addendum"
         }
         def emitOverrideError(fullmsg: String) {
-          if (member.owner == clazz) reporter.error(member.pos, fullmsg)
+          if (memberOwner == clazz) reporter.error(member.pos, fullmsg)
           else mixinOverrideErrors += MixinOverrideError(member, fullmsg)
         }
 
@@ -378,18 +381,20 @@ abstract class RefChecks extends Transform {
         //Console.println(infoString(member) + " overrides " + infoString(other) + " in " + clazz);//DEBUG
 
         // return if we already checked this combination elsewhere
-        if (member.owner != clazz) {
-          def deferredCheck        = member.isDeferred || !other.isDeferred
-          def subOther(s: Symbol)  = s isSubClass other.owner
-          def subMember(s: Symbol) = s isSubClass member.owner
+        // todo: justify this... it's actually not correct (scala/bug#11136)
+        if (memberOwner != clazz) {
+          def subOther(s: Symbol)  = s isSubClass otherOwner
+          def subMember(s: Symbol) = s isSubClass memberOwner
 
-          if (subOther(member.owner) && deferredCheck) {
-            //Console.println(infoString(member) + " shadows1 " + infoString(other) " in " + clazz);//DEBUG
-            return
-          }
-          if (clazz.parentSymbols exists (p => subOther(p) && subMember(p) && deferredCheck)) {
-            //Console.println(infoString(member) + " shadows2 " + infoString(other) + " in " + clazz);//DEBUG
-            return
+          if (member.isDeferred || !other.isDeferred) {
+            if (subOther(memberOwner)) {
+              //Console.println(infoString(member) + " shadows1 " + infoString(other) " in " + clazz);//DEBUG
+              return
+            }
+            if (clazz.parentSymbols exists (p => subOther(p) && subMember(p))) {
+              //Console.println(infoString(member) + " shadows2 " + infoString(other) + " in " + clazz);//DEBUG
+              return
+            }
           }
           if (clazz.parentSymbols forall (p => subOther(p) == subMember(p))) {
             //Console.println(infoString(member) + " shadows " + infoString(other) + " in " + clazz);//DEBUG
@@ -411,8 +416,8 @@ abstract class RefChecks extends Transform {
             overrideError("has weaker access privileges; it should not be private")
 
           // todo: align accessibility implication checking with isAccessible in Contexts
-          val ob = other.accessBoundary(member.owner)
-          val mb = member.accessBoundary(member.owner)
+          val ob = other.accessBoundary(memberOwner)
+          val mb = member.accessBoundary(memberOwner)
           def isOverrideAccessOK = member.isPublic || {      // member is public, definitely same or relaxed access
             (!other.isProtected || member.isProtected) &&    // if o is protected, so is m
             ((!isRootOrNone(ob) && ob.hasTransOwner(mb)) ||  // m relaxes o's access boundary
@@ -429,7 +434,7 @@ abstract class RefChecks extends Transform {
           } else if (!other.isDeferred && !member.isAnyOverride && !member.isSynthetic) { // (*)
             // (*) Synthetic exclusion for (at least) default getters, fixes scala/bug#5178. We cannot assign the OVERRIDE flag to
             // the default getter: one default getter might sometimes override, sometimes not. Example in comment on ticket.
-              if (isNeitherInClass && !(other.owner isSubClass member.owner))
+              if (isNeitherInClass && !(otherOwner isSubClass memberOwner))
                 emitOverrideError(
                   clazz + " inherits conflicting members:\n  "
                     + infoStringWithLocation(other) + "  and\n  " + infoStringWithLocation(member)
@@ -449,7 +454,7 @@ abstract class RefChecks extends Transform {
               overrideError("cannot override a mutable variable")
           }
           else if (member.isAnyOverride &&
-                     !(member.owner.thisType.baseClasses exists (_ isSubClass other.owner)) &&
+                     !(memberOwner.thisType.baseClasses exists (_ isSubClass otherOwner)) &&
                      !member.isDeferred && !other.isDeferred &&
                      intersectionIsEmpty(member.extendedOverriddenSymbols, other.extendedOverriddenSymbols)) {
             overrideError("cannot override a concrete member without a third member that's overridden by both "+
