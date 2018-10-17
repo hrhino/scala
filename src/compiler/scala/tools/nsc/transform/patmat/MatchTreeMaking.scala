@@ -34,7 +34,7 @@ trait MatchTreeMaking extends MatchCodeGen with Debugging {
     def optimizeCases(prevBinder: Symbol, cases: List[List[TreeMaker]], pt: Type, selectorPos: Position): (List[List[TreeMaker]], List[Tree])
     def analyzeCases(prevBinder: Symbol, cases: List[List[TreeMaker]], pt: Type, suppression: Suppression): Unit
 
-    def emitSwitch(scrut: Tree, scrutSym: Symbol, cases: List[List[TreeMaker]], pt: Type, matchFailGenOverride: Option[Tree => Tree], unchecked: Boolean): Option[Tree] =
+    def emitSwitch(scrut: Tree, scrutSym: Symbol, cases: List[List[TreeMaker]], pt: Type, matchFailGenOverride: Option[Tree => Tree]): Option[Tree] =
       None
 
     // for catch (no need to customize match failure)
@@ -623,33 +623,43 @@ trait MatchTreeMaking extends MatchCodeGen with Debugging {
               (Suppression.NoSuppression, false)
           }
 
-        emitSwitch(scrut, scrutSym, casesNoSubstOnly, pt, matchFailGenOverride, unchecked = suppression.suppressExhaustive).getOrElse{
-          if (requireSwitch) reporter.warning(scrut.pos, "could not emit switch for @switch annotated match")
+        emitSwitch(scrut, scrutSym, casesNoSubstOnly, pt, matchFailGenOverride) match {
+          case Some(switch) =>
+            // enums are deserving of analysis; other switchable types (currently
+            // only the primitives) are not
+            if (scrutSym.info.typeSymbol.isJavaEnum) {
+              // we already did the unreachability analysis as part of validating
+              // the switch (should we also move the exhaustivity there?)
+              analyzeCases(scrutSym, casesNoSubstOnly, pt, suppression.copy(suppressUnreachable = true))
+            }
+            switch
+          case None =>
+            if (requireSwitch) reporter.warning(scrut.pos, "could not emit switch for @switch annotated match")
 
-          if (casesNoSubstOnly nonEmpty) {
-            // before optimizing, check casesNoSubstOnly for presence of a default case,
-            // since DCE will eliminate trivial cases like `case _ =>`, even if they're the last one
-            // exhaustivity and reachability must be checked before optimization as well
-            // TODO: improve notion of trivial/irrefutable -- a trivial type test before the body still makes for a default case
-            //   ("trivial" depends on whether we're emitting a straight match or an exception, or more generally, any supertype of scrutSym.tpe is a no-op)
-            //   irrefutability checking should use the approximation framework also used for CSE, unreachability and exhaustivity checking
-            val synthCatchAll =
-              if (casesNoSubstOnly.nonEmpty && {
-                    val nonTrivLast = casesNoSubstOnly.last
-                    nonTrivLast.nonEmpty && nonTrivLast.head.isInstanceOf[BodyTreeMaker]
-                  }) None
-              else matchFailGen
+            if (casesNoSubstOnly nonEmpty) {
+              // before optimizing, check casesNoSubstOnly for presence of a default case,
+              // since DCE will eliminate trivial cases like `case _ =>`, even if they're the last one
+              // exhaustivity and reachability must be checked before optimization as well
+              // TODO: improve notion of trivial/irrefutable -- a trivial type test before the body still makes for a default case
+              //   ("trivial" depends on whether we're emitting a straight match or an exception, or more generally, any supertype of scrutSym.tpe is a no-op)
+              //   irrefutability checking should use the approximation framework also used for CSE, unreachability and exhaustivity checking
+              val synthCatchAll =
+                if (casesNoSubstOnly.nonEmpty && {
+                      val nonTrivLast = casesNoSubstOnly.last
+                      nonTrivLast.nonEmpty && nonTrivLast.head.isInstanceOf[BodyTreeMaker]
+                    }) None
+                else matchFailGen
 
-            analyzeCases(scrutSym, casesNoSubstOnly, pt, suppression)
+              analyzeCases(scrutSym, casesNoSubstOnly, pt, suppression)
 
-            val (cases, toHoist) = optimizeCases(scrutSym, casesNoSubstOnly, pt, selectorPos)
+              val (cases, toHoist) = optimizeCases(scrutSym, casesNoSubstOnly, pt, selectorPos)
 
-            val matchRes = codegen.matcher(scrut, scrutSym, pt)(cases map combineExtractors, synthCatchAll)
+              val matchRes = codegen.matcher(scrut, scrutSym, pt)(cases map combineExtractors, synthCatchAll)
 
-            if (toHoist isEmpty) matchRes else Block(toHoist, matchRes)
-          } else {
-            codegen.matcher(scrut, scrutSym, pt)(Nil, matchFailGen)
-          }
+              if (toHoist isEmpty) matchRes else Block(toHoist, matchRes)
+            } else {
+              codegen.matcher(scrut, scrutSym, pt)(Nil, matchFailGen)
+            }
         }
       }
 

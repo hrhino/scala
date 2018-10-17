@@ -296,6 +296,7 @@ trait JavaUniverseForce { self: runtime.JavaUniverse  =>
     definitions.StructuralCallSite
     definitions.StructuralCallSite_dummy
     definitions.SymbolLiteral
+    definitions.SwitchMap
     definitions.ScalaXmlTopScope
     definitions.ScalaXmlPackage
     definitions.ReflectPackage

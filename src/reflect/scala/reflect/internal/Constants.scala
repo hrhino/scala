@@ -61,6 +61,7 @@ trait Constants extends api.Constants {
     def isNonUnitAnyVal       = BooleanTag <= tag && tag <= DoubleTag
     def isSuitableLiteralType = BooleanTag <= tag && tag <= NullTag
     def isAnyVal              = UnitTag <= tag && tag <= DoubleTag
+    def isEnum                = tag == EnumTag
 
     def tpe: Type = tag match {
       case UnitTag    => UnitTpe

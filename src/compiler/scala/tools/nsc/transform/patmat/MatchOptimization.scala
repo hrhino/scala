@@ -8,9 +8,8 @@ package scala.tools.nsc.transform.patmat
 
 import scala.language.postfixOps
 
-import scala.tools.nsc.symtab.Flags.MUTABLE
+import scala.reflect.internal.Flags._
 import scala.collection.mutable
-import scala.reflect.internal.util.Position
 
 /** Optimize and analyze matches based on their TreeMaker-representation.
  *
@@ -224,10 +223,6 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       // however, that's not supported in exception handlers, so when we can't jump when we need it, don't emit a switch
       // TODO: make more fine-grained, as we don't always need to jump
       def canJump: Boolean
-
-      /** Should exhaustivity analysis be skipped? */
-      def unchecked: Boolean
-
 
       def isDefault(x: CaseDef): Boolean
       def defaultSym: Symbol
@@ -495,8 +490,28 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
         }
     }
 
-    class RegularSwitchMaker(scrutSym: Symbol, matchFailGenOverride: Option[Tree => Tree], val unchecked: Boolean) extends SwitchMaker {
-      val switchableTpe = Set(ByteTpe, ShortTpe, IntTpe, CharTpe)
+    /** Those primitive symbols for which we can always emit switches. */
+    private val switchables =
+      Set[Symbol](ByteClass, ShortClass, IntClass, CharClass)
+    /** Whether a value with type `tpe` can be the scrutinee of a switch.  */
+    def isSwitchable(tpe: Type): Boolean = {
+      val sym = tpe.typeSymbol; switchables.contains(sym) || sym.isJavaEnum
+    }
+
+    private val _enumConstants = perRunCaches.newAnyRefMap[Symbol, IndexedSeq[Symbol]]()
+    /** For a given (Java) enumeration class `enum`, the field symbols for its
+      * enum constants, sorted by declaration order.
+      */
+    def enumConstants(enum: Symbol): IndexedSeq[Symbol] = {
+      _enumConstants.getOrElseUpdate(enum, {
+        enum.info.decls.sorted
+          .filter(_.hasAllFlags(STATIC | JAVA_ENUM))
+          .toArray[Symbol]
+      })
+    }
+
+    class RegularSwitchMaker(scrutSym: Symbol, matchFailGenOverride: Option[Tree => Tree]) extends SwitchMaker {
+      val isEnum = definitions.SwitchMap.exists && scrutSym.tpe.typeSymbol.isJavaEnum
       val alternativesSupported = true
       val canJump = true
 
@@ -505,6 +520,9 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       object SwitchablePattern { def unapply(pat: Tree): Option[Tree] = pat.tpe match {
         case FoldableConstantType(const) if const.isIntRange =>
           Some(Literal(Constant(const.intValue))) // TODO: Java 7 allows strings in switches
+        case FoldableConstantType(const) if const.isEnum =>
+          val enum = const.symbolValue.owner
+          Some(Literal(Constant(enumConstants(enum) indexOf const.symbolValue)))
         case _ => None
       }}
 
@@ -527,16 +545,58 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       }}
     }
 
-    override def emitSwitch(scrut: Tree, scrutSym: Symbol, cases: List[List[TreeMaker]], pt: Type, matchFailGenOverride: Option[Tree => Tree], unchecked: Boolean): Option[Tree] = { import CODE._
-      val regularSwitchMaker = new RegularSwitchMaker(scrutSym, matchFailGenOverride, unchecked)
+    override def emitSwitch(scrut: Tree, scrutSym: Symbol, cases: List[List[TreeMaker]], pt: Type, matchFailGenOverride: Option[Tree => Tree]): Option[Tree] = { import CODE._
+      def mkEnumOrdinal(enum: Symbol, dflt: => Tree): Tree = atPos(scrut.pos.focus) {
+        val argsLimit = 255 - 1 - 3 - 1 // JVM limit. See See MAX_MH_ARITY in CallSite.java
+        val ordinalSym = freshSym(scrut.pos.focus, IntTpe, "ordinal")
+        def ordinal = REF(ordinalSym)
+        val consts = enumConstants(enum)
+
+        def mkRangedLookup(lo: Int): Tree = {
+          // SwitchMap returns an array with as many elements as `enum` has
+          // constants; the `i`th element's value is the runtime ordinal
+          // corresponding to the compile time ordinal `i`. Since bootstrap
+          // methods can have at most 251 user-provided arguments, we need one
+          // of these for each block of 250 enum constants (starting at `lo`);
+          // in each, unmapped/unknown constants are mapped to 1
+          val inRange = consts.view.slice(lo, lo + argsLimit)
+          val args: List[Tree] = (
+            Literal(Constant(SwitchMap_bootstrap)).setType(NoType)
+              :: Literal(Constant(lo)).setType(IntTpe)
+              :: inRange.map(c => Literal(Constant(c)).setType(enum.tpe)).toList
+            )
+          val map = ApplyDynamic(Ident(SwitchMap_dummy).setType(SwitchMap_dummy.info), args)
+            .setType(SwitchMap_dummy.info.resultType)
+          (map DOT Array_apply)(ordinal)
+        }
+
+        val lookup =
+          if (consts.size <= argsLimit) mkRangedLookup(0)
+          else {
+            (0 to consts.size by argsLimit).foldRight[Tree](dflt)((lo, next) =>
+              IF (ordinal INT_< (LIT typed (lo + argsLimit)))
+              THEN mkRangedLookup(lo)
+              ELSE next
+            )
+          }
+        BLOCK(
+          ValDef(ordinalSym, REF(scrutSym) DOT nme.ordinal),
+          lookup
+        )
+      }
+
+      val patTpe = dealiasWiden(scrutSym.tpe)
       // TODO: if patterns allow switch but the type of the scrutinee doesn't, cast (type-test) the scrutinee to the corresponding switchable type and switch on the result
-      if (regularSwitchMaker.switchableTpe(dealiasWiden(scrutSym.tpe))) {
+      if (isSwitchable(patTpe)) {
+        val regularSwitchMaker = new RegularSwitchMaker(scrutSym, matchFailGenOverride)
         val caseDefsWithDefault = regularSwitchMaker(cases map {c => (scrutSym, c)}, pt)
         if (caseDefsWithDefault isEmpty) None // not worth emitting a switch.
         else {
           // match on scrutSym -- converted to an int if necessary -- not on scrut directly (to avoid duplicating scrut)
           val scrutToInt: Tree =
             if (scrutSym.tpe =:= IntTpe) REF(scrutSym)
+            else if (regularSwitchMaker.isEnum)
+              mkEnumOrdinal(patTpe.typeSymbol.linkedClassOfClass, regularSwitchMaker.defaultBody)
             else (REF(scrutSym) DOT (nme.toInt))
           Some(BLOCK(
             ValDef(scrutSym, scrut),

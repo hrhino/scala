@@ -6,67 +6,67 @@
       [9]()
     };
     [107]def commonSubPattern([124]x: [127]<type: [127]scala.Any>): [107]AnyVal = [205]{
-      [205]<synthetic> var rc6: [205]Boolean = [205]false;
+      [205]<synthetic> var rc5: [205]Boolean = [205]false;
       [205]<synthetic> var x3: [205]String = [205][205][205]null.asInstanceOf[[205]String];
       [205]{
         [205]case <synthetic> val x1: [205]Any = [205]x;
-        [205]case8(){
+        [205]case7(){
           [313]if ([313][313]x1.isInstanceOf[[313]Option[_]])
-            [325][325]matchEnd7([325]())
+            [325][325]matchEnd6([325]())
           else
-            [313][313]case9()
+            [313][313]case8()
         };
-        [205]case9(){
+        [205]case8(){
           [412]if ([412][412]x1.isInstanceOf[[412]String])
             [412]{
-              [412][412]rc6 = [412]true;
+              [412][412]rc5 = [412]true;
               [412][412]x3 = [412]([412][412]x1.asInstanceOf[[412]String]: [412]String);
               [412]if ([427][427]x3.==([430]"4"))
-                [512][512]matchEnd7([512][512]x3.hashCode())
+                [512][512]matchEnd6([512][512]x3.hashCode())
               else
-                [412][412]case10()
+                [412][412]case9()
             }
           else
-            [412][412]case10()
+            [412][412]case9()
+        };
+        [205]case9(){
+          [612]if ([612][612]rc5.&&([627][627]x3.==([630]"6")))
+            [712][712]matchEnd6([712][712]x3.hashCode())
+          else
+            [612][612]case10()
         };
         [205]case10(){
-          [612]if ([612][612]rc6.&&([627][627]x3.==([630]"6")))
-            [712][712]matchEnd7([712][712]x3.hashCode())
-          else
-            [612][612]case11()
+          [205][205]matchEnd6([205]throw [205][205][205]new [205]MatchError([205]x1))
         };
-        [205]case11(){
-          [205][205]matchEnd7([205]throw [205][205][205]new [205]MatchError([205]x1))
-        };
-        [205]matchEnd7(x: [NoPosition]AnyVal){
+        [205]matchEnd6(x: [NoPosition]AnyVal){
           [205]x
         }
       }
     };
     [1007]def extractor([1017]x: [1020]<type: [1020]scala.Any>): [1007]Any = [1027]{
       [1027]case <synthetic> val x1: [1027]Any = [1027]x;
-      [1027]case6(){
+      [1027]case5(){
         [1120]if ([1120][1120]x1.isInstanceOf[[1120]Product2[T1,T2]])
           [1120]{
             [1120]<synthetic> val x2: [1120]Product2[T1,T2] = [1120]([1120][1120]x1.asInstanceOf[[1120]Product2[T1,T2]]: [1120]Product2[T1,T2]);
             [1112]{
-              [1112]<synthetic> val o8: [1112]Option[Product2[T1,T2]] = [1112][1112][1112]scala.Product2.unapply[[1112]T1, [1112]T2]([1112]x2);
-              [1112]if ([1112]o8.isEmpty.unary_!)
+              [1112]<synthetic> val o7: [1112]Option[Product2[T1,T2]] = [1112][1112][1112]scala.Product2.unapply[[1112]T1, [1112]T2]([1112]x2);
+              [1112]if ([1112]o7.isEmpty.unary_!)
                 [1112]{
-                  [1121]val a: [1121]Any = [1121]o8.get._1;
-                  [1210][1210]matchEnd5([1210]a)
+                  [1121]val a: [1121]Any = [1121]o7.get._1;
+                  [1210][1210]matchEnd4([1210]a)
                 }
               else
-                [1112][1112]case7()
+                [1112][1112]case6()
             }
           }
         else
-          [1120][1120]case7()
+          [1120][1120]case6()
       };
-      [1027]case7(){
-        [1027][1027]matchEnd5([1027]throw [1027][1027][1027]new [1027]MatchError([1027]x1))
+      [1027]case6(){
+        [1027][1027]matchEnd4([1027]throw [1027][1027][1027]new [1027]MatchError([1027]x1))
       };
-      [1027]matchEnd5(x: [NoPosition]Any){
+      [1027]matchEnd4(x: [NoPosition]Any){
         [1027]x
       }
     };
@@ -75,22 +75,22 @@
     } catch {
       [1505]case [1505](ex6 @ [1505]_) => [1505]{
         [1812]<synthetic> val x4: [1812]Throwable = [1812]ex6;
-        [1505]case9(){
+        [1505]case8(){
           [1812]if ([1812][1812]x4.ne([1812]null))
             [1812]{
               [1812]<synthetic> val x5: [1812]Throwable = [1812]x4;
               [1812]if ([1915][1915][1912]"".isEmpty())
-                [2014][2014]matchEnd8([2014][2014]x5.toString())
+                [2014][2014]matchEnd7([2014][2014]x5.toString())
               else
-                [1812][1812]case10()
+                [1812][1812]case9()
             }
           else
-            [1812][1812]case10()
+            [1812][1812]case9()
         };
-        [1505]case10(){
-          [1505][1505]matchEnd8([1505]throw [1505]ex6)
+        [1505]case9(){
+          [1505][1505]matchEnd7([1505]throw [1505]ex6)
         };
-        [1505]matchEnd8(x: [NoPosition]String){
+        [1505]matchEnd7(x: [NoPosition]String){
           [1505]x
         }
       }

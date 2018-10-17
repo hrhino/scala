@@ -130,17 +130,22 @@ abstract class BTypesFromSymbols[G <: Global](val global: G) extends BTypes {
 
   def bootstrapMethodArg(t: Constant, pos: Position): AnyRef = t match {
     case Constant(mt: Type) => methodBTypeFromMethodType(transformedType(mt), isConstructor = false).toASMType
-    case c @ Constant(sym: Symbol) => staticHandleFromSymbol(sym)
+    case c @ Constant(sym: Symbol) => staticHandleFromSymbol(sym, pos)
     case c @ Constant(value: String) => value
     case c @ Constant(value) if c.isNonUnitAnyVal => c.value.asInstanceOf[AnyRef]
     case _ => reporter.error(pos, "Unable to convert static argument of ApplyDynamic into a classfile constant: " + t); null
   }
 
-  def staticHandleFromSymbol(sym: Symbol): asm.Handle = {
+  def staticHandleFromSymbol(sym: Symbol, pos: Position): asm.Handle = {
     val owner = if (sym.owner.isModuleClass) sym.owner.linkedClassOfClass else sym.owner
-    val descriptor = methodBTypeFromMethodType(sym.info, isConstructor = false).descriptor
     val ownerBType = classBTypeFromSymbol(owner)
-    new asm.Handle(asm.Opcodes.H_INVOKESTATIC, ownerBType.internalName, sym.name.encoded, descriptor, /* itf = */ ownerBType.isInterface.get)
+    val (opcode, descriptor) =
+      if (sym.isMethod)
+        (asm.Opcodes.H_INVOKESTATIC, methodBTypeFromMethodType(sym.info, isConstructor = false).descriptor)
+      else if (sym.isField)
+        (asm.Opcodes.H_GETSTATIC, typeToBType(sym.info).descriptor)
+      else { reporter.error(pos, s"unable to convert $sym into a handle"); return null }
+    new asm.Handle(opcode, ownerBType.internalName, sym.name.encoded, descriptor, /* itf = */ ownerBType.isInterface.get)
   }
 
   /**

@@ -498,6 +498,9 @@ trait Definitions extends api.StandardDefinitions {
     lazy val SymbolLiteral        = getClassIfDefined("scala.runtime.SymbolLiteral")
       def SymbolLiteral_bootstrap = getMemberIfDefined(SymbolLiteral.linkedClassOfClass, sn.Bootstrap)
       def SymbolLiteral_dummy     = NoSymbol.newMethodSymbol(nme.apply).setInfo(NullaryMethodType(SymbolModule.companionClass.tpe))
+    lazy val SwitchMap        = getModuleIfDefined("scala.runtime.SwitchMap")
+      def SwitchMap_bootstrap = getMemberIfDefined(SwitchMap, sn.Bootstrap)
+      def SwitchMap_dummy     = NoSymbol.newTermSymbol(nme.apply).setInfo(NullaryMethodType(arrayType(IntTpe)))
 
     // XML
     lazy val ScalaXmlTopScope = getModuleIfDefined("scala.xml.TopScope")

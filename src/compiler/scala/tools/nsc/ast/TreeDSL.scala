@@ -71,6 +71,7 @@ trait TreeDSL {
       def OBJ_EQ  (other: Tree)     = fn(target, Object_eq, other)
       def OBJ_NE  (other: Tree)     = fn(target, Object_ne, other)
 
+      def INT_<   (other: Tree)     = fn(target, getMember(IntClass, nme.LT), other)
       def INT_>=  (other: Tree)     = fn(target, getMember(IntClass, nme.GE), other)
       def INT_==  (other: Tree)     = fn(target, getMember(IntClass, nme.EQ), other)
       def INT_-   (other: Tree)     = fn(target, getMember(IntClass, nme.MINUS), other)

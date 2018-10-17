@@ -296,9 +296,20 @@ abstract class BCodeBodyBuilder extends BCodeSkelBuilder {
           generatedType = genApply(app, expectedType)
 
         case app @ ApplyDynamic(qual, Literal(Constant(bootstrapMethodRef: Symbol)) :: staticAndDynamicArgs) =>
-          val numStaticArgs = bootstrapMethodRef.paramss.head.size - 3 /*JVM provided args*/
-          val (staticArgs, dynamicArgs) = staticAndDynamicArgs.splitAt(numStaticArgs)
-          val bootstrapDescriptor = staticHandleFromSymbol(bootstrapMethodRef)
+          val isVarargsBootstrap = enteringUncurry {
+            isRepeatedParamType(bootstrapMethodRef.paramss.head.last.info)
+          }
+          val (staticArgs, dynamicArgs) =
+            if (isVarargsBootstrap) {
+              (staticAndDynamicArgs.flatMap {
+                case ArrayValue(_, elems) => elems
+                case other                => other :: Nil
+              }, Nil)
+            } else {
+              val numStaticArgs = bootstrapMethodRef.paramss.head.size - 3 /*JVM provided args*/
+              staticAndDynamicArgs splitAt numStaticArgs
+            }
+          val bootstrapDescriptor = staticHandleFromSymbol(bootstrapMethodRef, app.pos)
           val bootstrapArgs = staticArgs.map({case t @ Literal(c: Constant) => bootstrapMethodArg(c, t.pos)})
           val descriptor = methodBTypeFromMethodType(qual.symbol.info, false)
           genLoadArguments(dynamicArgs, qual.symbol.info.params.map(param => typeToBType(param.info)))
