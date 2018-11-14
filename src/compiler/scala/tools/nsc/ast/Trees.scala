@@ -17,6 +17,8 @@ import scala.reflect.ClassTag
 import java.lang.System.{lineSeparator => EOL}
 
 trait Trees extends scala.reflect.internal.Trees { self: Global =>
+  import analyzer.Typer
+
   // --- additional cases --------------------------------------------------------
   /** Only used during parsing */
   case class Parens(args: List[Tree]) extends Tree {
@@ -38,6 +40,8 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(definition)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer) =
+      typer.typedDocDef(this, mode, pt)
   }
 
  /** Array selection `<qualifier> . <name>` only used during erasure */
@@ -72,6 +76,8 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
     override def traverse(traverser: Traverser): Unit = {
       // (and rewrap the result? how to update the deferred check? would need to store wrapped tree instead of returning it from check)
     }
+    // TODO: retype the wrapped tree? TTWDRC would have to change to hold the wrapped tree (not a closure)
+    override def typecheck(mode: Mode, pt: Type, typer: Typer) = this
   }
 
   // --- factory methods ----------------------------------------------------------

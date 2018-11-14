@@ -14,8 +14,7 @@ package scala
 package reflect
 package runtime
 
-import scala.reflect.internal.{TreeInfo, SomePhase}
-import scala.reflect.internal.{SymbolTable => InternalSymbolTable}
+import scala.reflect.internal.{SomePhase, TreeInfo, Typers, SymbolTable => InternalSymbolTable}
 import scala.reflect.runtime.{SymbolTable => RuntimeSymbolTable}
 import scala.reflect.internal.util.Statistics
 import scala.reflect.api.{TypeCreator, Universe}
@@ -49,6 +48,7 @@ class JavaUniverse extends InternalSymbolTable with JavaUniverseForce with Refle
   }
   protected def PerRunReporting = new PerRunReporting
 
+  override lazy val analyzer: Typers { val global: self.type } = new reflect.internal.Typers { val global: self.type = self }
 
   type TreeCopier = InternalTreeCopierOps
   implicit val TreeCopierTag: ClassTag[TreeCopier] = ClassTag[TreeCopier](classOf[TreeCopier])

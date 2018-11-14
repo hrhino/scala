@@ -71,6 +71,8 @@ abstract class SymbolTable extends macros.Universe
   /** Some statistics (normally disabled) set with -Ystatistics */
   val statistics: Statistics with ReflectStats
 
+  val analyzer: Typers { val global: SymbolTable.this.type }
+
   def log(msg: => AnyRef): Unit
 
   protected def elapsedMessage(msg: String, startNs: Long) =

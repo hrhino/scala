@@ -38,6 +38,7 @@ trait JavaUniverseForce { self: runtime.JavaUniverse  =>
     TypeTag.Null.tpe
 
     this.settings
+    this.analyzer
     this.internal
     this.treeInfo
     this.rootMirror

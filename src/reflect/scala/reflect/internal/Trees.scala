@@ -23,6 +23,8 @@ import util.{Statistics, StatisticsStatics}
 trait Trees extends api.Trees {
   self: SymbolTable =>
 
+  import analyzer.Typer
+
   private[scala] var nodeCount = 0
 
   protected def treeLine(t: Tree): String =
@@ -106,6 +108,9 @@ trait Trees extends api.Trees {
 
     override def duplicate: this.type =
       (duplicator transform this).asInstanceOf[this.type]
+
+    def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      abort(s"unexpected $shortClass in $mode (pt $pt): $this")
   }
 
   abstract class TreeContextApiImpl extends TreeApi { this: Tree =>
@@ -317,6 +322,8 @@ trait Trees extends api.Trees {
       traverser.traverse(pid)
       traverser.traverseStats(stats, mclass(this.symbol))
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedPackageDef(this)
   }
   object PackageDef extends PackageDefExtractor
 
@@ -337,6 +344,8 @@ trait Trees extends api.Trees {
       traverser.traverseParams(tparams)
       traverser.traverse(impl)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedClassDef(this)
   }
   object ClassDef extends ClassDefExtractor {
     /** @param sym       the class symbol
@@ -371,6 +380,8 @@ trait Trees extends api.Trees {
       traverser.traverseName(name)
       traverser.traverse(impl)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedModuleDef(this)
   }
   object ModuleDef extends ModuleDefExtractor {
     /**
@@ -409,6 +420,8 @@ trait Trees extends api.Trees {
       traverser.traverseTypeAscription(tpt)
       traverser.traverse(rhs)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedValDef(this)
   }
   object ValDef extends ValDefExtractor {
     def apply(sym: Symbol): ValDef            = newValDef(sym, EmptyTree)()
@@ -431,7 +444,8 @@ trait Trees extends api.Trees {
       traverser.traverseTypeAscription(tpt)
       traverser.traverse(rhs)
     }
-
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedDefDef(this)
   }
   object DefDef extends DefDefExtractor {
     def apply(sym: Symbol, rhs: Tree): DefDef                                                = newDefDef(sym, rhs)()
@@ -454,6 +468,8 @@ trait Trees extends api.Trees {
       traverser.traverseParams(tparams)
       traverser.traverse(rhs)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedTypeDef(this)
   }
   object TypeDef extends TypeDefExtractor {
     /** A TypeDef node which defines abstract type or type parameter for given `sym` */
@@ -470,6 +486,8 @@ trait Trees extends api.Trees {
       traverser.traverseParams(params)
       traverser.traverse(rhs)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedLabelDef(this)
   }
   object LabelDef extends LabelDefExtractor {
     def apply(sym: Symbol, params: List[Symbol], rhs: Tree): LabelDef =
@@ -515,6 +533,8 @@ trait Trees extends api.Trees {
       traverser.traverseTrees(stats)
       traverser.traverse(expr)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedBlock(this, mode, pt)
   }
   object Block extends BlockExtractor
 
@@ -536,6 +556,8 @@ trait Trees extends api.Trees {
       transformer.treeCopy.Alternative(this, transformer.transformTrees(trees))
     override def traverse(traverser: Traverser): Unit =
       traverser.traverseTrees(trees)
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedAlternative(this, mode, pt)
   }
   object Alternative extends AlternativeExtractor
 
@@ -546,6 +568,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(elem)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedStar(this, mode, pt)
   }
   object Star extends StarExtractor
 
@@ -557,6 +581,8 @@ trait Trees extends api.Trees {
       traverser.traverseName(name)
       traverser.traverse(body)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedBind(this, mode, pt)
   }
   object Bind extends BindExtractor
 
@@ -594,6 +620,8 @@ trait Trees extends api.Trees {
       traverser.traverse(elemtpt)
       traverser.traverseTrees(elems)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedArrayValue(this, mode, pt)
   }
 
   case class Function(vparams: List[ValDef], body: Tree)
@@ -605,6 +633,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = traverser.atOwner(this.symbol) {
       traverser.traverseParams(vparams) ; traverser.traverse(body)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedFunction(this, mode, pt)
   }
   object Function extends FunctionExtractor
 
@@ -616,6 +646,8 @@ trait Trees extends api.Trees {
       traverser.traverse(lhs)
       traverser.traverse(rhs)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedAssign(this, mode, pt)
   }
   object Assign extends AssignExtractor
 
@@ -627,6 +659,8 @@ trait Trees extends api.Trees {
       traverser.traverse(lhs)
       traverser.traverse(rhs)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedNamedArg(this, mode, pt)
   }
   object NamedArg extends NamedArgExtractor
 
@@ -639,6 +673,8 @@ trait Trees extends api.Trees {
       traverser.traverse(thenp)
       traverser.traverse(elsep)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedIf(this, mode, pt)
   }
   object If extends IfExtractor
 
@@ -650,6 +686,8 @@ trait Trees extends api.Trees {
       traverser.traverse(selector)
       traverser.traverseCases(cases)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedMatch(this, mode, pt)
   }
   object Match extends MatchExtractor
 
@@ -660,6 +698,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(expr)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedReturn(this, mode, pt)
   }
   object Return extends ReturnExtractor
 
@@ -672,6 +712,8 @@ trait Trees extends api.Trees {
       traverser.traverseCases(catches)
       traverser.traverse(finalizer)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedTry(this, mode, pt)
   }
   object Try extends TryExtractor
 
@@ -682,6 +724,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(expr)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedThrow(this, mode, pt)
   }
   object Throw extends ThrowExtractor
 
@@ -691,6 +735,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(tpt)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedNew(this, mode, pt)
   }
   object New extends NewExtractor
 
@@ -702,6 +748,8 @@ trait Trees extends api.Trees {
       traverser.traverse(expr)
       traverser.traverseTypeAscription(tpt)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedTyped(this, mode, pt)
   }
   object Typed extends TypedExtractor
 
@@ -732,6 +780,8 @@ trait Trees extends api.Trees {
       traverser.traverse(fun)
       traverser.traverseTypeArgs(args)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedTypeApply(this, mode, pt)
   }
   object TypeApply extends TypeApplyExtractor
 
@@ -745,6 +795,8 @@ trait Trees extends api.Trees {
       traverser.traverse(fun)
       traverser.traverseTrees(args)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedApply(this, mode, pt)
   }
   object Apply extends ApplyExtractor
 
@@ -775,6 +827,8 @@ trait Trees extends api.Trees {
       traverser.traverse(qual)
       traverser.traverseTrees(args)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedApplyDynamic(this, mode, pt)
   }
 
   case class Super(qual: Tree, mix: TypeName) extends TermTree with SuperApi {
@@ -786,6 +840,8 @@ trait Trees extends api.Trees {
       traverser.traverse(qual)
       traverser.traverseName(mix)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedSuper(this, mode, pt)
   }
   object Super extends SuperExtractor
 
@@ -796,6 +852,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverseName(qual)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedThis(this, mode, pt)
   }
   object This extends ThisExtractor
 
@@ -812,6 +870,8 @@ trait Trees extends api.Trees {
       traverser.traverse(qualifier)
       traverser.traverseName(name)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedSelect(this, mode, pt)
   }
   object Select extends SelectExtractor
 
@@ -824,6 +884,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverseName(name)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedIdent(this, mode, pt)
   }
   object Ident extends IdentExtractor
 
@@ -835,6 +897,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(ident)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedReferenceToBoxed(this, mode, pt)
   }
   object ReferenceToBoxed extends ReferenceToBoxedExtractor
 
@@ -846,6 +910,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverseConstant(value)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedLiteral(this, mode, pt)
   }
   object Literal extends LiteralExtractor
 
@@ -859,6 +925,8 @@ trait Trees extends api.Trees {
       traverser.traverse(annot)
       traverser.traverse(arg)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedAnnotated(this, mode, pt)
   }
   object Annotated extends AnnotatedExtractor
 
@@ -869,12 +937,13 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(ref)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedSingletonTypeTree(this, mode, pt)
   }
   object SingletonTypeTree extends SingletonTypeTreeExtractor
 
   case class SelectFromTypeTree(qualifier: Tree, name: TypeName)
        extends RefTree with TypTree with SelectFromTypeTreeApi {
-
     assert(qualifier.isType, qualifier)
     override def transform(transformer: Transformer): Tree =
       transformer.treeCopy.SelectFromTypeTree(this, transformer.transform(qualifier), name)
@@ -882,6 +951,8 @@ trait Trees extends api.Trees {
       traverser.traverse(qualifier)
       traverser.traverseName(name)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedSelectFromTypeTree(this, mode, pt)
   }
   object SelectFromTypeTree extends SelectFromTypeTreeExtractor
 
@@ -892,6 +963,8 @@ trait Trees extends api.Trees {
     override def traverse(traverser: Traverser): Unit = {
       traverser.traverse(templ)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedCompoundTypeTree(this, mode, pt)
   }
   object CompoundTypeTree extends CompoundTypeTreeExtractor
 
@@ -908,6 +981,8 @@ trait Trees extends api.Trees {
       traverser.traverse(tpt)
       traverser.traverseTypeArgs(args)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedAppliedTypeTree(this, mode, pt)
   }
   object AppliedTypeTree extends AppliedTypeTreeExtractor
 
@@ -919,6 +994,8 @@ trait Trees extends api.Trees {
       traverser.traverse(lo)
       traverser.traverse(hi)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedTypeBoundsTree(this, mode, pt)
   }
   object TypeBoundsTree extends TypeBoundsTreeExtractor
 
@@ -930,6 +1007,8 @@ trait Trees extends api.Trees {
       traverser.traverse(tpt)
       traverser.traverseTrees(whereClauses)
     }
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedExistentialTypeTree(this, mode, pt)
   }
   object ExistentialTypeTree extends ExistentialTypeTreeExtractor
 
@@ -976,7 +1055,8 @@ trait Trees extends api.Trees {
       transformer.treeCopy.TypeTree(this)
     override def traverse(traverser: Traverser): Unit =
       ()
-
+    override def typecheck(mode: Mode, pt: Type, typer: Typer): Tree =
+      typer.typedTypeTree(this, mode, pt)
   }
   object TypeTree extends TypeTreeExtractor
 
