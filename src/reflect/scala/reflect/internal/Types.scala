@@ -2158,16 +2158,17 @@ trait Types
       }
       finalizeHash(h, length)
     }
-    //OPT specialize equals
+    // OPT specialize equals
+    // - compare sym first (it's a good discriminator and a reference equality check)
+    // - don't check outer pointers (if syms are the same, then they're from the same universe)
     override final def equals(other: Any): Boolean = {
-      if (this eq other.asInstanceOf[AnyRef]) true
-      else other match {
-        case otherTypeRef: TypeRef =>
-          Objects.equals(pre, otherTypeRef.pre) && sym.eq(otherTypeRef.sym) && sameElementsEquals(args, otherTypeRef.args)
-        case _ => false
-      }
+      (this eq other.asInstanceOf[AnyRef]) || (other.isInstanceOf[Types#TypeRef] && {
+        val otherTypeRef = other.asInstanceOf[TypeRef]
+        sym.eq(otherTypeRef.sym) &&
+          Objects.equals(pre, otherTypeRef.pre) &&
+          sameElementsEquals(args, otherTypeRef.args)
+      })
     }
-
 
     // interpret symbol's info in terms of the type's prefix and type args
     protected def relativeInfo: Type = appliedType(sym.info.asSeenFrom(pre, sym.owner), argsOrDummies)
