@@ -1349,7 +1349,7 @@ trait Types
   final class UniqueTypeBounds(lo: Type, hi: Type) extends TypeBounds(lo, hi)
 
   object TypeBounds extends TypeBoundsExtractor {
-    def empty: TypeBounds           = apply(NothingTpe, AnyTpe)
+    val empty: TypeBounds           = apply(NothingTpe, AnyTpe)
     def upper(hi: Type): TypeBounds = apply(NothingTpe, hi)
     def lower(lo: Type): TypeBounds = apply(lo, AnyTpe)
     def apply(lo: Type, hi: Type): TypeBounds = {
