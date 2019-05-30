@@ -2145,18 +2145,21 @@ trait Types
 
     //OPT specialize hashCode
     override final def computeHashCode = {
-      import scala.util.hashing.MurmurHash3._
-      var h = productSeed
-      h = mix(h, pre.hashCode)
-      h = mix(h, sym.hashCode)
-      var length = 2
+      var h = 0x305f46d9 // "TypeRef".##
+      h ^= pre.hashCode
+      h *= 31
+      h ^= sym.hashCode
+      h *= 31
+      var length = 0
       var elems = args
       while (elems ne Nil) {
-        h = mix(h, elems.head.hashCode())
+        h ^= elems.head.hashCode
+        h *= 31
         elems = elems.tail
         length += 1
       }
-      finalizeHash(h, length)
+      h ^= length
+      h
     }
     // OPT specialize equals
     // - compare sym first (it's a good discriminator and a reference equality check)
